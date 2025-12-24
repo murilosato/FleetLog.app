@@ -1,0 +1,7 @@
+{
+  "name": "Solurb CheckList - Gestão de Resíduos",
+  "description": "Sistema digital de checklist para inspeção de veículos de coleta de resíduos, substituindo formulários de papel por uma interface moderna e segura.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
