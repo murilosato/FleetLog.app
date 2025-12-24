@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { ChecklistSubmission } from '../types';
+import { ChecklistEntry } from '../types';
 
 interface DashboardProps {
-  submissions: ChecklistSubmission[];
+  submissions: ChecklistEntry[];
   onNewChecklist: () => void;
   onViewHistory: () => void;
   aiSummary: string | null;
@@ -93,12 +93,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {lastSubmission.prefix}
               </div>
               <div className="flex-1">
-                <p className="font-bold text-slate-800">Checklist Finalizado</p>
-                <p className="text-sm text-slate-500">{lastSubmission.date} • {lastSubmission.driverName}</p>
+                <p className="font-bold text-slate-800">Checklist de {lastSubmission.type} Finalizado</p>
+                <p className="text-sm text-slate-500">{lastSubmission.date} • {lastSubmission.driver_name}</p>
               </div>
               <div className="text-right">
-                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${lastSubmission.shift === 'Day' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                  {lastSubmission.shift === 'Day' ? 'Diurno' : 'Noturno'}
+                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${lastSubmission.shift === 'Diurno' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                  {lastSubmission.shift}
                 </span>
               </div>
             </div>

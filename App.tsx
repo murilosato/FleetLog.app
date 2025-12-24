@@ -88,7 +88,6 @@ const App: React.FC = () => {
     if (entries.length === 0) return;
     setIsSummarizing(true);
     try {
-      // Fixed: Always use the exact process.env.API_KEY string for initialization
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `Analise os últimos relatórios de inspeção da frota SOLURB.
       Dados: ${JSON.stringify(entries.slice(0, 5).map(e => ({
@@ -96,16 +95,16 @@ const App: React.FC = () => {
         hasIssues: e.has_issues,
         obs: e.general_observations
       })))}
-      Forneça um resumo executivo sobre a saúde da frota e prioridades de manutenção.`;
+      Forneça um resumo executivo sobre a saúde da frota e prioridades de manutenção. Responda em Português do Brasil.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt
       });
-      // Fixed: Use .text property instead of calling it as a method
       setAiSummary(response.text || "Sem resumo disponível.");
     } catch (error) {
-      setAiSummary("Erro na IA.");
+      console.error("Erro na IA:", error);
+      setAiSummary("Não foi possível gerar a análise da frota agora.");
     } finally {
       setIsSummarizing(false);
     }
@@ -124,7 +123,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-4 text-sm">
             {isLoading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
             <span className="hidden sm:inline">Olá, <b>{user.name}</b></span>
-            <button onClick={handleLogout} className="bg-emerald-800 px-3 py-1 rounded">Sair</button>
+            <button onClick={handleLogout} className="bg-emerald-800 px-3 py-1 rounded hover:bg-emerald-900 transition-colors">Sair</button>
           </div>
         </div>
       </header>
@@ -132,7 +131,7 @@ const App: React.FC = () => {
       <main className="flex-1 max-w-5xl w-full mx-auto p-4 pb-24">
         {view === 'dashboard' && (
           <Dashboard 
-            submissions={entries as any} 
+            submissions={entries} 
             onNewChecklist={() => setView('form')} 
             onViewHistory={() => setView('history')}
             aiSummary={aiSummary}
@@ -145,13 +144,13 @@ const App: React.FC = () => {
             user={user} 
             vehicles={vehicles}
             availableItems={checklistItems}
-            onSubmit={handleSubmitEntry as any} 
+            onSubmit={handleSubmitEntry} 
             onCancel={() => setView('dashboard')} 
           />
         )}
         {view === 'history' && (
           <HistoryView 
-            submissions={entries as any} 
+            submissions={entries} 
             onBack={() => setView('dashboard')} 
           />
         )}

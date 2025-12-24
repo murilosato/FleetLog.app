@@ -5,6 +5,18 @@ export enum ItemStatus {
   DEFECTIVE = 'DEFEITUOSO'
 }
 
+// Added missing ChecklistItem and ChecklistSection interfaces
+export interface ChecklistItem {
+  id: number;
+  label: string;
+  surveyed: boolean;
+}
+
+export interface ChecklistSection {
+  title: string;
+  items: ChecklistItem[];
+}
+
 export interface User {
   id: string;
   name: string;
@@ -27,16 +39,6 @@ export interface DBChecklistItem {
   category: string;
 }
 
-// Fixed: Added missing ChecklistSection interface used in constants.tsx
-export interface ChecklistSection {
-  title: string;
-  items: {
-    id: number;
-    label: string;
-    surveyed: boolean;
-  }[];
-}
-
 export interface ChecklistEntry {
   id: string;
   date: string;
@@ -52,27 +54,4 @@ export interface ChecklistEntry {
   created_at: number;
   user_id: string;
   has_issues: boolean;
-}
-
-// Fixed: Added missing ChecklistSubmission interface used in Dashboard.tsx and HistoryView.tsx
-export interface ChecklistSubmission {
-  id: string;
-  date: string;
-  prefix: string;
-  shift: string;
-  driverName: string;
-  driverId: string;
-  km: number;
-  hourmeter: number;
-  departureTime: string;
-  sections: {
-    title: string;
-    items: {
-      id: number;
-      label: string;
-      status: ItemStatus;
-      observations?: string;
-    }[];
-  }[];
-  generalObservations?: string;
 }
