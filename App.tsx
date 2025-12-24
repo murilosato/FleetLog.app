@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import ChecklistForm from './components/ChecklistForm';
 import HistoryView from './components/HistoryView';
 import { GoogleGenAI } from '@google/genai';
+import { supabase } from './lib/supabase';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -13,19 +14,39 @@ const App: React.FC = () => {
   const [submissions, setSubmissions] = useState<ChecklistSubmission[]>([]);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load submissions from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('solurb_submissions');
-    if (saved) {
-      setSubmissions(JSON.parse(saved));
+  // Load submissions from Supabase
+  const fetchSubmissions = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('submissions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const formattedData: ChecklistSubmission[] = data.map(item => ({
+          ...item.payload,
+          id: item.id,
+          // Garante que o ID e metadados básicos venham do DB se necessário
+        }));
+        setSubmissions(formattedData);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar dados do Supabase:', err);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
 
-  // Save submissions to localStorage
   useEffect(() => {
-    localStorage.setItem('solurb_submissions', JSON.stringify(submissions));
-  }, [submissions]);
+    if (user) {
+      fetchSubmissions();
+    }
+  }, [user]);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
@@ -36,9 +57,31 @@ const App: React.FC = () => {
     setView('dashboard');
   };
 
-  const handleSubmitChecklist = (submission: ChecklistSubmission) => {
-    setSubmissions([submission, ...submissions]);
-    setView('dashboard');
+  const handleSubmitChecklist = async (submission: ChecklistSubmission) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .insert([
+          { 
+            id: submission.id,
+            prefix: submission.prefix,
+            driver_name: submission.driverName,
+            payload: submission 
+          }
+        ]);
+
+      if (error) throw error;
+      
+      // Atualiza lista local após sucesso
+      setSubmissions([submission, ...submissions]);
+      setView('dashboard');
+    } catch (err) {
+      console.error('Erro ao salvar no Supabase:', err);
+      alert('Erro ao salvar checklist. Verifique sua conexão.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const generateAiReport = async () => {
@@ -84,7 +127,10 @@ const App: React.FC = () => {
             <h1 className="font-bold tracking-tight text-lg">SOLURB DIGITAL</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm hidden sm:inline opacity-90">Olá, <span className="font-semibold">{user.name}</span></span>
+            <div className="flex items-center gap-2">
+               {isLoading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+               <span className="text-sm hidden sm:inline opacity-90">Olá, <span className="font-semibold">{user.name}</span></span>
+            </div>
             <button 
               onClick={handleLogout}
               className="text-sm bg-emerald-800 hover:bg-emerald-900 px-3 py-1 rounded transition-colors"
