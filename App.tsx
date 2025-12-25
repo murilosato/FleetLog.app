@@ -97,12 +97,12 @@ const App: React.FC = () => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `Analise os últimos relatórios de inspeção da frota SOLURB.
-      Dados: ${JSON.stringify(entries.slice(0, 5).map(e => ({
+      Dados: ${JSON.stringify(entries.slice(0, 10).map(e => ({
         prefix: e.prefix,
         hasIssues: e.has_issues,
         obs: e.general_observations
       })))}
-      Forneça um resumo executivo sobre a saúde da frota e prioridades de manutenção. Responda em Português do Brasil.`;
+      Forneça um resumo executivo sobre a saúde da frota e prioridades de manutenção. Responda em Português do Brasil de forma concisa.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -137,7 +137,10 @@ const App: React.FC = () => {
                 GESTÃO
               </button>
             )}
-            <span className="hidden sm:inline"><b>{user.name}</b></span>
+            <div className="hidden sm:flex flex-col items-end leading-none">
+              <span className="font-bold">{user.name}</span>
+              <span className="text-[9px] opacity-70 uppercase font-black">{user.role}</span>
+            </div>
             <button onClick={handleLogout} className="p-1.5 hover:bg-emerald-800 rounded-full transition-colors" title="Sair">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
@@ -149,8 +152,10 @@ const App: React.FC = () => {
         {view === 'dashboard' && (
           <Dashboard 
             submissions={entries} 
+            user={user}
             onNewChecklist={() => setView('form')} 
             onViewHistory={() => setView('history')}
+            onRefresh={fetchEntries}
             aiSummary={aiSummary}
             isSummarizing={isSummarizing}
             generateAiReport={generateAiReport}

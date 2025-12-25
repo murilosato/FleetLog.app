@@ -1,11 +1,14 @@
 
 import React from 'react';
-import { ChecklistEntry } from '../types';
+import { ChecklistEntry, ItemStatus, User } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface DashboardProps {
   submissions: ChecklistEntry[];
+  user: User;
   onNewChecklist: () => void;
   onViewHistory: () => void;
+  onRefresh: () => void;
   aiSummary: string | null;
   isSummarizing: boolean;
   generateAiReport: () => void;
@@ -13,13 +16,44 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   submissions, 
+  user,
   onNewChecklist, 
   onViewHistory,
+  onRefresh,
   aiSummary,
   isSummarizing,
   generateAiReport
 }) => {
   const lastSubmission = submissions[0];
+
+  // Filtros para Manutenção e Operação
+  const maintenanceBacklog = submissions.filter(s => 
+    !s.maintenance_checked && 
+    Object.values(s.items).some(item => item.status === ItemStatus.DEFECTIVE)
+  );
+
+  const operationBacklog = submissions.filter(s => 
+    !s.operation_checked && 
+    Object.values(s.items).some(item => item.status === ItemStatus.MISSING)
+  );
+
+  const handleResolveIssue = async (entryId: string, role: 'MANUTENCAO' | 'OPERACAO') => {
+    const update = role === 'MANUTENCAO' 
+      ? { maintenance_checked: true, maintenance_user_id: user.id }
+      : { operation_checked: true, operation_user_id: user.id };
+
+    try {
+      const { error } = await supabase
+        .from('entries')
+        .update(update)
+        .eq('id', entryId);
+      
+      if (error) throw error;
+      onRefresh();
+    } catch (err) {
+      alert("Erro ao marcar como resolvido.");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -53,6 +87,66 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* Seção Manutenção (Se for Admin ou Manutenção) */}
+      {(user.role === 'ADMIN' || user.role === 'MANUTENCAO') && maintenanceBacklog.length > 0 && (
+        <div className="bg-red-50 border border-red-100 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 bg-red-600 text-white flex justify-between items-center">
+            <h3 className="font-black uppercase tracking-tight text-sm">⚠️ Pendências de Manutenção ({maintenanceBacklog.length})</h3>
+            <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded font-bold">ITENS DEFEITUOSOS</span>
+          </div>
+          <div className="p-4 space-y-3">
+            {maintenanceBacklog.map(s => (
+              <div key={s.id} className="bg-white p-4 rounded-xl shadow-sm border border-red-100 flex items-center justify-between">
+                <div>
+                  <p className="font-black text-slate-800">Veículo {s.prefix}</p>
+                  <div className="flex gap-1 mt-1">
+                    {Object.entries(s.items).filter(([_, v]) => v.status === ItemStatus.DEFECTIVE).map(([id]) => (
+                      <span key={id} className="text-[9px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold border border-red-100">Item {id}</span>
+                    ))}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => handleResolveIssue(s.id, 'MANUTENCAO')}
+                  className="bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded-lg shadow-lg shadow-red-100 hover:bg-red-700 transition-all"
+                >
+                  MARCAR RESOLVIDO
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Seção Operação (Se for Admin ou Operação) */}
+      {(user.role === 'ADMIN' || user.role === 'OPERACAO') && operationBacklog.length > 0 && (
+        <div className="bg-orange-50 border border-orange-100 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 bg-orange-500 text-white flex justify-between items-center">
+            <h3 className="font-black uppercase tracking-tight text-sm">📦 Pendências de Operação ({operationBacklog.length})</h3>
+            <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded font-bold">ITENS FALTANDO</span>
+          </div>
+          <div className="p-4 space-y-3">
+            {operationBacklog.map(s => (
+              <div key={s.id} className="bg-white p-4 rounded-xl shadow-sm border border-orange-100 flex items-center justify-between">
+                <div>
+                  <p className="font-black text-slate-800">Veículo {s.prefix}</p>
+                  <div className="flex gap-1 mt-1">
+                    {Object.entries(s.items).filter(([_, v]) => v.status === ItemStatus.MISSING).map(([id]) => (
+                      <span key={id} className="text-[9px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded font-bold border border-orange-100">Item {id}</span>
+                    ))}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => handleResolveIssue(s.id, 'OPERACAO')}
+                  className="bg-orange-500 text-white text-[10px] font-black px-4 py-2 rounded-lg shadow-lg shadow-orange-100 hover:bg-orange-600 transition-all"
+                >
+                  REPOSIÇÃO FEITA
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* AI Summary Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -85,7 +179,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Recent Activity */}
       <div>
-        <h3 className="text-lg font-bold text-slate-700 mb-3">Atividades Recentes</h3>
+        <h3 className="text-lg font-bold text-slate-700 mb-3">Última Inspeção</h3>
         {lastSubmission ? (
           <div className="space-y-3">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
@@ -96,10 +190,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <p className="font-bold text-slate-800">Checklist de {lastSubmission.type} Finalizado</p>
                 <p className="text-sm text-slate-500">{lastSubmission.date} • {lastSubmission.driver_name}</p>
               </div>
-              <div className="text-right">
-                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${lastSubmission.shift === 'Diurno' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}>
+              <div className="text-right flex flex-col items-end gap-1">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${lastSubmission.shift === 'Diurno' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}>
                   {lastSubmission.shift}
                 </span>
+                {lastSubmission.has_issues && <span className="text-[8px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-black uppercase">Pendências</span>}
               </div>
             </div>
           </div>

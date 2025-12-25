@@ -14,64 +14,111 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
   const [tab, setTab] = useState<'vehicles' | 'items'>('vehicles');
   const [loading, setLoading] = useState(false);
 
-  // Estados para novos cadastros
   const [newVehicle, setNewVehicle] = useState({ prefix: '', plate: '', km: 0, horimetro: 0 });
   const [newItem, setNewItem] = useState({ label: '', category: 'GERAL' });
 
   const handleToggleVehicle = async (id: string, currentStatus: boolean) => {
     setLoading(true);
-    const { error } = await supabase.from('vehicles').update({ active: !currentStatus }).eq('id', id);
-    if (error) alert(error.message);
-    else onRefresh();
-    setLoading(false);
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .update({ active: !currentStatus })
+        .eq('id', id);
+      
+      if (error) throw error;
+      onRefresh();
+    } catch (err: any) {
+      console.error("Erro ao alterar status:", err);
+      alert("Erro ao alterar status: " + (err.message || "Tente novamente em instantes."));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpdateVehicleValues = async (id: string, km: number, horimetro: number) => {
     setLoading(true);
-    const { error } = await supabase.from('vehicles').update({ current_km: km, current_horimetro: horimetro }).eq('id', id);
-    if (error) alert(error.message);
-    else onRefresh();
-    setLoading(false);
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .update({ 
+          current_km: km, 
+          current_horimetro: horimetro 
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      onRefresh();
+    } catch (err: any) {
+      alert("Erro ao atualizar: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddVehicle = async () => {
-    if (!newVehicle.prefix || !newVehicle.plate) return;
+    if (!newVehicle.prefix || !newVehicle.plate) {
+      alert("Preencha o prefixo e a placa.");
+      return;
+    }
     setLoading(true);
-    const { error } = await supabase.from('vehicles').insert([{
-      id: crypto.randomUUID(),
-      prefix: newVehicle.prefix,
-      plate: newVehicle.plate,
-      current_km: newVehicle.km,
-      current_horimetro: newVehicle.horimetro,
-      active: true
-    }]);
-    if (error) alert(error.message);
-    else {
+    try {
+      const { error } = await supabase.from('vehicles').insert([{
+        prefix: newVehicle.prefix,
+        plate: newVehicle.plate,
+        current_km: newVehicle.km,
+        current_horimetro: newVehicle.horimetro,
+        active: true
+      }]);
+      
+      if (error) throw error;
+
       setNewVehicle({ prefix: '', plate: '', km: 0, horimetro: 0 });
       onRefresh();
+      alert("Veículo cadastrado!");
+    } catch (err: any) {
+      alert("Erro ao cadastrar: " + err.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleAddItem = async () => {
     if (!newItem.label) return;
     setLoading(true);
-    const { error } = await supabase.from('checklist_items').insert([newItem]);
-    if (error) alert(error.message);
-    else {
+    try {
+      const { error } = await supabase.from('checklist_items').insert([newItem]);
+      if (error) throw error;
       setNewItem({ label: '', category: 'GERAL' });
       onRefresh();
+    } catch (err: any) {
+      alert("Erro ao adicionar item: " + err.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDeleteItem = async (id: number) => {
-    if (!confirm("Tem certeza que deseja remover este item?")) return;
+    if (!confirm("Tem certeza que deseja remover este item permanentemente?")) return;
     setLoading(true);
-    const { error } = await supabase.from('checklist_items').delete().eq('id', id);
-    if (error) alert(error.message);
-    else onRefresh();
-    setLoading(false);
+    try {
+      // Nota: O filtro .eq('id', id) é essencial.
+      const { error, status } = await supabase
+        .from('checklist_items')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        throw error;
+      }
+
+      // Se o status for 204 ou 200, a exclusão ocorreu no servidor.
+      onRefresh();
+    } catch (err: any) {
+      console.error("Erro detalhado ao deletar:", err);
+      alert("Não foi possível excluir o item. Verifique se você executou o novo script SQL no Supabase para liberar permissões de DELETE.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -101,7 +148,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
       {tab === 'vehicles' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cadastro de Veículo */}
           <div className="lg:col-span-1 bg-white p-6 rounded-[2rem] border shadow-sm h-fit sticky top-24">
             <h3 className="font-black text-slate-800 text-lg mb-6 uppercase tracking-tight">Novo Veículo</h3>
             <div className="space-y-4">
@@ -118,20 +164,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                 onChange={e => setNewVehicle({...newVehicle, plate: e.target.value})}
               />
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">KM Inicial</label>
+                <div className="bg-slate-50 p-3 rounded-2xl">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">KM Inicial</label>
                   <input 
                     type="number"
-                    className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-emerald-500 outline-none"
+                    className="w-full bg-transparent font-bold outline-none"
                     value={newVehicle.km}
                     onChange={e => setNewVehicle({...newVehicle, km: Number(e.target.value)})}
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Horímetro Inicial</label>
+                <div className="bg-slate-50 p-3 rounded-2xl">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Horímetro</label>
                   <input 
                     type="number"
-                    className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-emerald-500 outline-none"
+                    className="w-full bg-transparent font-bold outline-none"
                     value={newVehicle.horimetro}
                     onChange={e => setNewVehicle({...newVehicle, horimetro: Number(e.target.value)})}
                   />
@@ -142,39 +188,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                 disabled={loading}
                 className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black shadow-xl shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-50"
               >
-                CADASTRAR VEÍCULO
+                {loading ? 'CADASTRANDO...' : 'CADASTRAR VEÍCULO'}
               </button>
             </div>
           </div>
 
-          {/* Listagem de Veículos */}
           <div className="lg:col-span-2 space-y-4">
             {vehicles.map(v => (
               <div key={v.id} className={`bg-white p-6 rounded-3xl border shadow-sm flex flex-col sm:flex-row items-center gap-6 transition-opacity ${!v.active ? 'opacity-50' : ''}`}>
-                <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center font-black text-2xl text-emerald-700">
+                <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center font-black text-2xl text-emerald-700 shrink-0">
                   {v.prefix}
                 </div>
-                <div className="flex-1 text-center sm:text-left">
-                  <p className="font-black text-slate-800 text-lg leading-tight">{v.plate}</p>
-                  <p className="text-xs text-slate-400 font-bold uppercase">{v.active ? 'Ativo na Frota' : 'Inativo'}</p>
+                <div className="flex-1">
+                  <p className="font-black text-slate-800 text-lg">{v.plate}</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase">{v.active ? 'Ativo' : 'Inativo'}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-center">
-                   <div className="bg-slate-50 p-2 rounded-xl">
+                <div className="grid grid-cols-2 gap-2">
+                   <div className="bg-slate-50 p-2 rounded-xl text-center min-w-[80px]">
                       <p className="text-[9px] font-black text-slate-400 uppercase">KM</p>
                       <input 
                         type="number" 
                         defaultValue={v.current_km} 
                         onBlur={(e) => handleUpdateVehicleValues(v.id, Number(e.target.value), v.current_horimetro)}
-                        className="w-20 bg-transparent text-center font-bold text-slate-700 outline-none focus:text-emerald-600"
+                        className="w-full bg-transparent text-center font-bold text-slate-700 outline-none"
                       />
                    </div>
-                   <div className="bg-slate-50 p-2 rounded-xl">
+                   <div className="bg-slate-50 p-2 rounded-xl text-center min-w-[80px]">
                       <p className="text-[9px] font-black text-slate-400 uppercase">HORÍM.</p>
                       <input 
                         type="number" 
                         defaultValue={v.current_horimetro} 
                         onBlur={(e) => handleUpdateVehicleValues(v.id, v.current_km, Number(e.target.value))}
-                        className="w-20 bg-transparent text-center font-bold text-slate-700 outline-none focus:text-emerald-600"
+                        className="w-full bg-transparent text-center font-bold text-slate-700 outline-none"
                       />
                    </div>
                 </div>
@@ -217,23 +262,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                 disabled={loading}
                 className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black shadow-xl shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-50"
               >
-                ADICIONAR ITEM
+                {loading ? 'ADICIONANDO...' : 'ADICIONAR ITEM'}
               </button>
             </div>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            {/* Agrupamento por categoria */}
             {Array.from(new Set(items.map(i => i.category))).map(cat => (
               <div key={cat} className="space-y-3">
                 <h4 className="text-xs font-black text-emerald-600 uppercase tracking-widest ml-4">{cat}</h4>
-                <div className="bg-white rounded-[2rem] border shadow-sm divide-y">
+                <div className="bg-white rounded-[2rem] border shadow-sm divide-y overflow-hidden">
                   {items.filter(i => i.category === cat).map(item => (
-                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors first:rounded-t-[2rem] last:rounded-b-[2rem]">
+                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                       <span className="font-bold text-slate-700 text-sm">{item.label}</span>
                       <button 
                         onClick={() => handleDeleteItem(item.id)}
-                        className="p-2 text-red-300 hover:text-red-600 transition-colors"
+                        className="p-2 text-slate-300 hover:text-red-600 transition-colors"
+                        title="Remover Item"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                       </button>
