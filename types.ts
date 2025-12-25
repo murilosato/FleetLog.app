@@ -5,7 +5,6 @@ export enum ItemStatus {
   DEFECTIVE = 'DEFEITUOSO'
 }
 
-// Added missing ChecklistItem and ChecklistSection interfaces
 export interface ChecklistItem {
   id: number;
   label: string;
@@ -31,6 +30,7 @@ export interface Vehicle {
   plate: string;
   current_km: number;
   current_horimetro: number;
+  active: boolean;
 }
 
 export interface DBChecklistItem {

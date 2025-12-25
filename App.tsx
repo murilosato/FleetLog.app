@@ -5,12 +5,13 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ChecklistForm from './components/ChecklistForm';
 import HistoryView from './components/HistoryView';
+import AdminPanel from './components/AdminPanel';
 import { GoogleGenAI } from '@google/genai';
 import { supabase } from './lib/supabase';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<'dashboard' | 'form' | 'history'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'form' | 'history' | 'admin'>('dashboard');
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [checklistItems, setChecklistItems] = useState<DBChecklistItem[]>([]);
@@ -18,16 +19,23 @@ const App: React.FC = () => {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Carregar dados iniciais
-  useEffect(() => {
-    const initAppData = async () => {
+  const initAppData = async () => {
+    setIsLoading(true);
+    try {
       const [vRes, iRes] = await Promise.all([
-        supabase.from('vehicles').select('*'),
-        supabase.from('checklist_items').select('*')
+        supabase.from('vehicles').select('*').order('prefix', { ascending: true }),
+        supabase.from('checklist_items').select('*').order('category', { ascending: true })
       ]);
       if (vRes.data) setVehicles(vRes.data);
       if (iRes.data) setChecklistItems(iRes.data);
-    };
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     initAppData();
   }, []);
 
@@ -67,14 +75,13 @@ const App: React.FC = () => {
       const { error } = await supabase.from('entries').insert([entry]);
       if (error) throw error;
       
-      // Atualizar KM/Horímetro do veículo
       await supabase.from('vehicles').update({
         current_km: entry.km,
-        current_horimetro: entry.horimetro,
-        last_updated: Date.now()
+        current_horimetro: entry.horimetro
       }).eq('id', entry.vehicle_id);
 
-      setEntries([entry, ...entries]);
+      await fetchEntries();
+      await initAppData();
       setView('dashboard');
     } catch (err) {
       console.error('Erro ao salvar entrada:', err);
@@ -116,14 +123,24 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-emerald-700 text-white shadow-lg sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('dashboard')}>
             <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center font-bold text-emerald-700">S</div>
             <h1 className="font-bold">SOLURB DIGITAL</h1>
           </div>
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-3 text-sm">
             {isLoading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
-            <span className="hidden sm:inline">Olá, <b>{user.name}</b></span>
-            <button onClick={handleLogout} className="bg-emerald-800 px-3 py-1 rounded hover:bg-emerald-900 transition-colors">Sair</button>
+            {user.role === 'ADMIN' && (
+              <button 
+                onClick={() => setView('admin')}
+                className={`px-3 py-1 rounded font-bold transition-colors ${view === 'admin' ? 'bg-white text-emerald-700' : 'bg-emerald-800 hover:bg-emerald-900'}`}
+              >
+                GESTÃO
+              </button>
+            )}
+            <span className="hidden sm:inline"><b>{user.name}</b></span>
+            <button onClick={handleLogout} className="p-1.5 hover:bg-emerald-800 rounded-full transition-colors" title="Sair">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </button>
           </div>
         </div>
       </header>
@@ -152,6 +169,14 @@ const App: React.FC = () => {
           <HistoryView 
             submissions={entries} 
             onBack={() => setView('dashboard')} 
+          />
+        )}
+        {view === 'admin' && (
+          <AdminPanel 
+            vehicles={vehicles}
+            items={checklistItems}
+            onRefresh={initAppData}
+            onBack={() => setView('dashboard')}
           />
         )}
       </main>

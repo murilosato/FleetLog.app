@@ -19,6 +19,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     try {
+      // Busca por username ou matrícula
       const { data, error: dbError } = await supabase
         .from('users')
         .select('*')
@@ -28,112 +29,91 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (dbError) throw dbError;
 
       if (!data) {
-        setError('Usuário ou Matrícula não encontrados.');
+        setError('Acesso negado. Usuário ou Matrícula não encontrados.');
       } else {
         onLogin(data as User);
       }
     } catch (err) {
       console.error(err);
-      setError('Erro ao conectar ao servidor. Verifique sua conexão.');
+      setError('Erro de conexão. Verifique o banco de dados.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSeedAdmin = async () => {
+  const handleSeedUsers = async () => {
     setSeedStatus('loading');
     try {
-      // Verifica se já existe
-      const { data: existing } = await supabase
-        .from('users')
-        .select('id')
-        .eq('username', 'admin')
-        .maybeSingle();
+      const initialUsers = [
+        { id: '10000000-0000-0000-0000-000000000001', name: 'Administrador', username: 'admin', role: 'ADMIN', matricula: '001' },
+        { id: '10000000-0000-0000-0000-000000000002', name: 'Manutenção', username: 'manutencao', role: 'MANUTENCAO', matricula: '002' },
+        { id: '10000000-0000-0000-0000-000000000003', name: 'Operação', username: 'operacao', role: 'OPERACAO', matricula: '003' }
+      ];
 
-      if (existing) {
-        setSeedStatus('success');
-        alert('Usuário admin já existe no banco.');
-        return;
+      for (const user of initialUsers) {
+        const { data: existing } = await supabase.from('users').select('id').eq('username', user.username).maybeSingle();
+        if (!existing) {
+          await supabase.from('users').insert([user]);
+        }
       }
-
-      // Insere o admin inicial
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert([
-          {
-            id: '00000000-0000-0000-0000-000000000000',
-            name: 'Admin Sistema',
-            username: 'admin',
-            role: 'ADMIN',
-            matricula: '001'
-          }
-        ]);
-
-      if (insertError) throw insertError;
       
       setSeedStatus('success');
-      alert('Usuário "admin" (matrícula 001) criado com sucesso!');
+      alert('Usuários (admin, manutencao, operacao) configurados!');
     } catch (err) {
       console.error(err);
       setSeedStatus('error');
-      alert('Erro ao criar usuário admin. Verifique as permissões da tabela users.');
+      alert('Erro ao configurar usuários iniciais.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-emerald-800 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative overflow-hidden">
+    <div className="min-h-screen bg-emerald-900 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full relative">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center mb-4 text-white font-bold text-4xl italic shadow-inner">S</div>
-          <h1 className="text-2xl font-bold text-slate-800">SOLURB</h1>
-          <p className="text-slate-500">Acesso ao Sistema Operacional</p>
+          <div className="w-20 h-20 bg-emerald-600 rounded-2xl flex items-center justify-center mb-4 text-white font-bold text-5xl shadow-lg transform -rotate-3">S</div>
+          <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">SOLURB</h1>
+          <p className="text-slate-400 font-medium">Checklist Digital de Coleta</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Usuário ou Matrícula</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Matrícula ou Usuário</label>
             <input 
               type="text" 
               value={credential}
               onChange={(e) => setCredential(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              placeholder="Ex: admin ou 001"
+              className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 focus:border-emerald-500 focus:ring-0 outline-none transition-all text-lg font-medium"
+              placeholder="Digite aqui..."
               required
             />
+            <p className="text-[10px] text-slate-400 mt-2">Dica: Use 001, 002 ou 003 para os usuários iniciais.</p>
           </div>
+          
           {error && (
-            <div className="bg-red-50 border border-red-100 text-red-600 p-3 rounded-lg text-xs font-medium animate-pulse">
+            <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-semibold border border-red-100 animate-shake">
               {error}
             </div>
           )}
+
           <button 
             disabled={loading}
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 transition-all active:scale-[0.98]"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-5 rounded-2xl shadow-xl shadow-emerald-200 disabled:opacity-50 transition-all active:scale-95 text-lg"
           >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                <span>Verificando...</span>
-              </div>
-            ) : 'Acessar Painel'}
+            {loading ? 'Carregando...' : 'Entrar no Sistema'}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col items-center">
+        <div className="mt-10 pt-6 border-t border-slate-50 flex flex-col items-center">
           <button 
-            onClick={handleSeedAdmin}
+            onClick={handleSeedUsers}
             disabled={seedStatus === 'loading'}
-            className="text-[10px] text-slate-400 hover:text-emerald-600 uppercase tracking-widest font-bold transition-colors"
+            className="text-[10px] text-slate-300 hover:text-emerald-600 font-bold uppercase tracking-widest transition-colors"
           >
-            {seedStatus === 'loading' ? 'CONFIGURANDO...' : '⚙️ Configuração Inicial (Criar Admin)'}
+            {seedStatus === 'loading' ? 'PROCESSANDO...' : '🛠️ Inicializar Usuários Padrão'}
           </button>
         </div>
       </div>
-      
-      {/* Background Decorative Elements */}
-      <div className="fixed top-0 left-0 w-64 h-64 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl pointer-events-none"></div>
-      <div className="fixed bottom-0 right-0 w-96 h-96 bg-black/10 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl pointer-events-none"></div>
     </div>
   );
 };
