@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [checklistItems, setChecklistItems] = useState<DBChecklistItem[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,12 +23,14 @@ const App: React.FC = () => {
   const initAppData = async () => {
     setIsLoading(true);
     try {
-      const [vRes, iRes] = await Promise.all([
+      const [vRes, iRes, uRes] = await Promise.all([
         supabase.from('vehicles').select('*').order('prefix', { ascending: true }),
-        supabase.from('checklist_items').select('*').order('category', { ascending: true })
+        supabase.from('checklist_items').select('*').order('id', { ascending: true }),
+        supabase.from('users').select('*')
       ]);
       if (vRes.data) setVehicles(vRes.data);
       if (iRes.data) setChecklistItems(iRes.data);
+      if (uRes.data) setUsers(uRes.data as User[]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -125,23 +128,38 @@ const App: React.FC = () => {
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('dashboard')}>
             <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center font-bold text-emerald-700">S</div>
-            <h1 className="font-bold">SOLURB DIGITAL</h1>
+            <h1 className="font-bold hidden sm:block">SOLURB DIGITAL</h1>
           </div>
-          <div className="flex items-center gap-3 text-sm">
-            {isLoading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+          
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <button 
+              onClick={() => setView('dashboard')}
+              className={`px-3 py-1 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'dashboard' ? 'bg-white text-emerald-700 shadow-md' : 'hover:bg-emerald-600'}`}
+            >
+              Início
+            </button>
+            <button 
+              onClick={() => setView('history')}
+              className={`px-3 py-1 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'history' ? 'bg-white text-emerald-700 shadow-md' : 'hover:bg-emerald-600'}`}
+            >
+              Histórico
+            </button>
             {user.role === 'ADMIN' && (
               <button 
                 onClick={() => setView('admin')}
-                className={`px-3 py-1 rounded font-bold transition-colors ${view === 'admin' ? 'bg-white text-emerald-700' : 'bg-emerald-800 hover:bg-emerald-900'}`}
+                className={`px-3 py-1 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'admin' ? 'bg-white text-emerald-700 shadow-md' : 'hover:bg-emerald-600'}`}
               >
-                GESTÃO
+                Gestão
               </button>
             )}
-            <div className="hidden sm:flex flex-col items-end leading-none">
-              <span className="font-bold">{user.name}</span>
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex flex-col items-end leading-none border-l border-emerald-600 pl-3">
+              <span className="font-bold text-sm">{user.name}</span>
               <span className="text-[9px] opacity-70 uppercase font-black">{user.role}</span>
             </div>
-            <button onClick={handleLogout} className="p-1.5 hover:bg-emerald-800 rounded-full transition-colors" title="Sair">
+            <button onClick={handleLogout} className="p-2 hover:bg-emerald-800 rounded-full transition-colors" title="Sair">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
           </div>
@@ -153,6 +171,7 @@ const App: React.FC = () => {
           <Dashboard 
             submissions={entries} 
             user={user}
+            availableItems={checklistItems}
             onNewChecklist={() => setView('form')} 
             onViewHistory={() => setView('history')}
             onRefresh={fetchEntries}
@@ -173,6 +192,8 @@ const App: React.FC = () => {
         {view === 'history' && (
           <HistoryView 
             submissions={entries} 
+            user={user}
+            users={users}
             onBack={() => setView('dashboard')} 
           />
         )}

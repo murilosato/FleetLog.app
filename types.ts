@@ -2,7 +2,7 @@
 export enum ItemStatus {
   OK = 'OK',
   MISSING = 'FALTA',
-  DEFECTIVE = 'DEFEITUOSO'
+  DEFECTIVE = 'DEFEITO'
 }
 
 export interface ChecklistItem {
@@ -54,6 +54,8 @@ export interface ChecklistEntry {
   created_at: number;
   user_id: string;
   has_issues: boolean;
+  has_divergence?: boolean;
+  divergence_details?: string;
   maintenance_checked?: boolean;
   maintenance_user_id?: string;
   operation_checked?: boolean;
