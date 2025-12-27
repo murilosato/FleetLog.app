@@ -29,6 +29,12 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
   const [lastSaida, setLastSaida] = useState<ChecklistEntry | null>(null);
   const [divergenceItems, setDivergenceItems] = useState<number[]>([]);
 
+  const formatDateDisplay = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   const validAvailableItems = useMemo(() => {
     return availableItems.filter(item => item.active !== false);
   }, [availableItems]);
@@ -257,7 +263,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
     const isDivergent = divergenceItems.includes(item.id);
     const response = itemResponses[item.id];
     const isSurveyed = response?.surveyed ?? true;
-    const cleanLabel = item.label.replace(/^\d+\.\s*/, ''); // Remove numeração antiga se existir no texto
+    const cleanLabel = item.label.replace(/^\d+\.\s*/, '');
 
     return (
       <div key={item.id} className={`py-5 sm:py-6 border-b border-slate-50 last:border-0 transition-all ${isDivergent ? 'bg-red-50/50 -mx-4 px-4 rounded-[1.5rem] sm:rounded-3xl' : ''}`}>
@@ -310,7 +316,6 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
 
   return (
     <div className="max-w-3xl mx-auto pb-20 relative animate-in slide-in-from-bottom-6 duration-700">
-      {/* Alerta Customizado Centralizado */}
       {showAlert && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#0A2540]/60 backdrop-blur-md">
           <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl max-w-sm w-full text-center space-y-6 sm:space-y-8 animate-in zoom-in-95 duration-200">
@@ -441,8 +446,8 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
           <div className="space-y-8 sm:space-y-10 animate-in fade-in zoom-in-95">
              <div className="space-y-4 sm:space-y-5">
                 <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">Resumo da Inspeção</h4>
+                <p className="text-[10px] font-bold text-slate-400 mb-2 ml-2 italic">Data da Vistoria: {formatDateDisplay(new Date().toISOString().split('T')[0])}</p>
                 
-                {/* Itens com Falhas */}
                 {issuesSummary.length > 0 && (
                   <div className="space-y-3">
                     <p className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2">Problemas Detectados</p>
@@ -457,7 +462,6 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
                   </div>
                 )}
 
-                {/* Itens Não Vistoriados */}
                 {nonSurveyedSummary.length > 0 && (
                   <div className="space-y-3">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Itens não Vistoriados</p>

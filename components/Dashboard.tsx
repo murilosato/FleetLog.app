@@ -29,6 +29,12 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [dashboardDate, setDashboardDate] = useState(new Date().toISOString().split('T')[0]);
 
+  const formatDateDisplay = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   const dailySubmissions = useMemo(() => 
     submissions.filter(s => s.date === dashboardDate), 
     [submissions, dashboardDate]
@@ -70,15 +76,28 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const getIssueSummary = (entry: ChecklistEntry, filterStatus: ItemStatus) => {
-    return Object.entries(entry.items)
+    const prefix = filterStatus === ItemStatus.DEFECTIVE ? 'DEFEITO: ' : 'FALTA: ';
+    const items = Object.entries(entry.items)
       .filter(([id, data]: [string, any]) => data.status === filterStatus)
       .map(([id, _]) => {
-        const dbItem = availableItems.find(i => i.id.toString() === id);
-        if (dbItem) return dbItem.label;
-        const item = OFFICIAL_SOLURB_ITEMS.find(i => i.id.toString() === id);
-        return item ? item.label : `Item ${id}`;
-      })
-      .slice(0, 3).join(', ') + (Object.entries(entry.items).filter(([_, d]: [string, any]) => d.status === filterStatus).length > 3 ? '...' : '');
+        const numericId = parseInt(id);
+        const dbItem = availableItems.find(i => i.id === numericId);
+        if (dbItem) {
+          const clean = dbItem.label.replace(/^\d+\.\s*/, '');
+          return clean;
+        }
+        const item = OFFICIAL_SOLURB_ITEMS.find(i => i.id === numericId);
+        if (item) {
+          const clean = item.label.replace(/^\d+\.\s*/, '');
+          return clean;
+        }
+        return `Item ${id}`;
+      });
+
+    if (items.length === 0) return entry.has_divergence ? 'DIVERGÊNCIA DE RETORNO' : '';
+    
+    const text = items.slice(0, 3).join(', ') + (items.length > 3 ? '...' : '');
+    return `${prefix}${text.toUpperCase()}`;
   };
 
   return (
@@ -89,7 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({
              <div className="w-2 h-8 sm:w-2.5 sm:h-10 bg-[#1E90FF] rounded-full"></div>
              Visão Geral
           </h2>
-          <p className="text-slate-400 font-bold text-xs sm:text-sm mt-1">Frota em tempo real • {dashboardDate}</p>
+          <p className="text-slate-400 font-bold text-xs sm:text-sm mt-1">Frota em tempo real • {formatDateDisplay(dashboardDate)}</p>
         </div>
         <div className="flex items-center gap-3 sm:gap-4 bg-slate-50 p-2 pl-4 sm:pl-5 rounded-xl sm:rounded-[2rem] border border-slate-100 w-full sm:w-auto">
           <label className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-widest shrink-0">Data Filtro:</label>
@@ -123,16 +142,21 @@ const Dashboard: React.FC<DashboardProps> = ({
       {(user.role === 'ADMIN' || user.role === 'MANUTENCAO') && maintenanceBacklog.length > 0 && (
         <div className="bg-red-50/30 border border-red-100 rounded-[2rem] sm:rounded-[3rem] overflow-hidden">
           <div className="px-6 sm:px-10 py-4 sm:py-6 bg-[#0A2540] text-white flex justify-between items-center">
-            <h3 className="font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs">Aguardando Manutenção</h3>
+            <h3 className="font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs">Aguardando visto da Manutenção</h3>
             <span className="bg-red-600 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black">{maintenanceBacklog.length}</span>
           </div>
           <div className="p-4 sm:p-8 space-y-4 sm:space-y-5">
             {maintenanceBacklog.map(s => (
-              <div key={s.id} className="bg-white p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm border border-red-100 flex flex-col sm:flex-row items-center gap-4 sm:gap-8 group hover:border-[#1E90FF] transition-all">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-50 text-red-600 rounded-xl sm:rounded-[1.5rem] flex items-center justify-center font-black text-xl sm:text-2xl group-hover:bg-[#1E90FF] group-hover:text-white transition-all">{s.prefix}</div>
+              <div key={s.id} className="bg-white p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm border border-red-100 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 group transition-all">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white border-2 border-red-500 rounded-xl flex items-center justify-center text-center p-2 shrink-0">
+                   <span className="font-black text-red-600 text-lg sm:text-xl leading-none">{s.prefix}</span>
+                </div>
+                
                 <div className="flex-1 text-center sm:text-left">
-                  <p className="text-base sm:text-lg font-black text-[#0A2540] mb-1">{s.driver_name}</p>
-                  <p className="text-[10px] sm:text-xs text-red-500 font-bold leading-relaxed">{getIssueSummary(s, ItemStatus.DEFECTIVE) || "Divergência detectada"}</p>
+                  <p className="text-base sm:text-lg font-black text-[#0A2540] uppercase tracking-tight">{s.driver_name}</p>
+                  <p className="text-[10px] sm:text-xs text-red-500 font-bold leading-tight mt-1 px-1 py-0.5 border border-red-100 inline-block rounded">
+                    {getIssueSummary(s, ItemStatus.DEFECTIVE)}
+                  </p>
                 </div>
                 <button onClick={() => handleResolveIssue(s.id, 'MANUTENCAO')} className="w-full sm:w-auto bg-[#0A2540] text-white text-[10px] font-black px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl shadow-xl hover:bg-[#1E90FF] transition-all uppercase tracking-widest active:scale-95">Validar Vistoria</button>
               </div>
@@ -144,16 +168,21 @@ const Dashboard: React.FC<DashboardProps> = ({
       {(user.role === 'ADMIN' || user.role === 'OPERACAO') && operationBacklog.length > 0 && (
         <div className="bg-orange-50/30 border border-orange-100 rounded-[2rem] sm:rounded-[3rem] overflow-hidden">
           <div className="px-6 sm:px-10 py-4 sm:py-6 bg-[#0A2540] text-white flex justify-between items-center">
-            <h3 className="font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs">Aguardando Operação</h3>
+            <h3 className="font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs">Aguardando visto da Operação</h3>
             <span className="bg-orange-500 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black">{operationBacklog.length}</span>
           </div>
           <div className="p-4 sm:p-8 space-y-4 sm:space-y-5">
             {operationBacklog.map(s => (
-              <div key={s.id} className="bg-white p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm border border-orange-100 flex flex-col sm:flex-row items-center gap-4 sm:gap-8 group hover:border-[#1E90FF] transition-all">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-orange-50 text-orange-600 rounded-xl sm:rounded-[1.5rem] flex items-center justify-center font-black text-xl sm:text-2xl group-hover:bg-[#1E90FF] group-hover:text-white transition-all">{s.prefix}</div>
+              <div key={s.id} className="bg-white p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm border border-orange-100 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 group transition-all">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white border-2 border-orange-500 rounded-xl flex items-center justify-center text-center p-2 shrink-0">
+                   <span className="font-black text-orange-600 text-lg sm:text-xl leading-none">{s.prefix}</span>
+                </div>
+
                 <div className="flex-1 text-center sm:text-left">
-                  <p className="text-base sm:text-lg font-black text-[#0A2540] mb-1">{s.driver_name}</p>
-                  <p className="text-[10px] sm:text-xs text-orange-600 font-bold leading-relaxed">{getIssueSummary(s, ItemStatus.MISSING)}</p>
+                  <p className="text-base sm:text-lg font-black text-[#0A2540] uppercase tracking-tight">{s.driver_name}</p>
+                  <p className="text-[10px] sm:text-xs text-orange-600 font-bold leading-tight mt-1 px-1 py-0.5 border border-orange-100 inline-block rounded">
+                    {getIssueSummary(s, ItemStatus.MISSING)}
+                  </p>
                 </div>
                 <button onClick={() => handleResolveIssue(s.id, 'OPERACAO')} className="w-full sm:w-auto bg-[#0A2540] text-white text-[10px] font-black px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl shadow-xl hover:bg-[#1E90FF] transition-all uppercase tracking-widest active:scale-95">Validar Operação</button>
               </div>

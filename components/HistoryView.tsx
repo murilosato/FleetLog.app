@@ -28,6 +28,12 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   const [editObs, setEditObs] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  const formatDateDisplay = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   const filteredSubmissions = useMemo(() => {
     let list = submissions;
     if (user.role === 'OPERADOR') list = list.filter(s => s.user_id === user.id);
@@ -55,13 +61,10 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   const exportToCSV = () => {
     if (filteredSubmissions.length === 0) return;
 
-    // A fonte de verdade para as colunas do CSV deve ser os itens que existem no banco
     const itemsToExport = availableItems.length > 0 ? availableItems : OFFICIAL_SOLURB_ITEMS;
     
-    // Cabeçalhos Base
     const baseHeaders = ['Data', 'Prefixo', 'Tipo', 'Turno', 'Motorista', 'KM', 'Horimetro', 'Observações Gerais'];
     
-    // Itens dinâmicos
     const itemHeaders: string[] = [];
     itemsToExport.sort((a,b) => a.id - b.id).forEach(item => {
       const cleanLabel = item.label.replace(/^\d+\.\s*/, '');
@@ -75,7 +78,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
     const rows = filteredSubmissions.map(s => {
       const baseData = [
-        s.date,
+        formatDateDisplay(s.date),
         s.prefix,
         s.type,
         s.shift,
@@ -220,7 +223,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                 <span className="font-black text-xl sm:text-2xl tracking-tighter">{sub.prefix}</span>
                 <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-full uppercase tracking-widest ${selected?.id === sub.id ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'}`}>{sub.type}</span>
               </div>
-              <p className="text-[10px] sm:text-xs font-bold opacity-70 uppercase tracking-widest">{sub.date} às {formatTime(sub.created_at)}</p>
+              <p className="text-[10px] sm:text-xs font-bold opacity-70 uppercase tracking-widest">{formatDateDisplay(sub.date)} às {formatTime(sub.created_at)}</p>
             </div>
           )) : (
             <div className="text-center p-10 bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
@@ -235,7 +238,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-50 pb-6 sm:pb-8">
                 <div>
                   <h3 className="text-4xl sm:text-5xl font-black text-[#0A2540] tracking-tighter">{selected.prefix}</h3>
-                  <p className="text-slate-400 font-bold mt-1 uppercase tracking-widest text-[10px] sm:text-xs">{selected.date} • {selected.type}</p>
+                  <p className="text-slate-400 font-bold mt-1 uppercase tracking-widest text-[10px] sm:text-xs">{formatDateDisplay(selected.date)} • {selected.type}</p>
                 </div>
                 {(user.role === 'OPERACAO' || user.role === 'ADMIN') && !isEditing && (
                   <button onClick={handleStartEdit} className="w-full sm:w-auto bg-[#1E90FF]/10 text-[#1E90FF] px-5 sm:px-6 py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#1E90FF] hover:text-white transition-all active:scale-95">
