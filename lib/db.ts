@@ -24,8 +24,9 @@ export const saveOfflineEntry = async (entry: any) => {
     const transaction = db.transaction('entries', 'readwrite');
     const store = transaction.objectStore('entries');
     const request = store.put({ ...entry, synced: false });
-    request.onsuccess = () => resolve(true);
-    request.onerror = () => reject(request.error);
+    
+    transaction.oncomplete = () => resolve(true);
+    transaction.onerror = () => reject(transaction.error);
   });
 };
 
@@ -35,23 +36,34 @@ export const getOfflineEntries = async () => {
     const transaction = db.transaction('entries', 'readonly');
     const store = transaction.objectStore('entries');
     const request = store.getAll();
-    request.onsuccess = () => resolve(request.result.filter((e: any) => !e.synced));
+    
+    request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 };
 
 export const markEntryAsSynced = async (id: string) => {
   const db = await initDB();
-  const transaction = db.transaction('entries', 'readwrite');
-  const store = transaction.objectStore('entries');
-  store.delete(id); // Removemos do local após sincronizar com sucesso
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('entries', 'readwrite');
+    const store = transaction.objectStore('entries');
+    const request = store.delete(id);
+    
+    transaction.oncomplete = () => resolve(true);
+    transaction.onerror = () => reject(transaction.error);
+  });
 };
 
 export const saveMetadata = async (type: string, data: any) => {
   const db = await initDB();
-  const transaction = db.transaction('metadata', 'readwrite');
-  const store = transaction.objectStore('metadata');
-  store.put({ type, data, timestamp: Date.now() });
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('metadata', 'readwrite');
+    const store = transaction.objectStore('metadata');
+    store.put({ type, data, timestamp: Date.now() });
+    
+    transaction.oncomplete = () => resolve(true);
+    transaction.onerror = () => reject(transaction.error);
+  });
 };
 
 export const getMetadata = async (type: string) => {
@@ -60,6 +72,7 @@ export const getMetadata = async (type: string) => {
     const transaction = db.transaction('metadata', 'readonly');
     const store = transaction.objectStore('metadata');
     const request = store.get(type);
+    
     request.onsuccess = () => resolve(request.result?.data || null);
     request.onerror = () => reject(request.error);
   });

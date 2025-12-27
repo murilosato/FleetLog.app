@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User, ChecklistEntry, Vehicle, DBChecklistItem } from './types';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -22,9 +22,37 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  
+  const syncingRef = useRef(false);
+
+  const checkPendingSyncs = useCallback(async () => {
+    try {
+      const pending = await getOfflineEntries();
+      setPendingSyncCount(pending.length);
+      return pending.length;
+    } catch (e) {
+      console.error("Erro ao checar pendências:", e);
+      return 0;
+    }
+  }, []);
+
+  const fetchEntries = useCallback(async () => {
+    if (!navigator.onLine) return;
+    try {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (data) setEntries(data as ChecklistEntry[]);
+    } catch (err) {
+      console.error('Erro ao buscar entradas:', err);
+    }
+  }, []);
 
   const syncOfflineData = useCallback(async () => {
-    if (!navigator.onLine) return;
+    if (!navigator.onLine || syncingRef.current) return;
     
     const offlineEntries = await getOfflineEntries();
     if (offlineEntries.length === 0) {
@@ -32,11 +60,14 @@ const App: React.FC = () => {
       return;
     }
 
-    console.log(`Sincronizando ${offlineEntries.length} vistorias pendentes...`);
+    syncingRef.current = true;
+    console.log(`Iniciando sincronização de ${offlineEntries.length} itens...`);
     
     for (const entry of offlineEntries) {
       try {
-        const { error } = await supabase.from('entries').insert([entry]);
+        // Usamos upsert para evitar erro de chave duplicada se a conexão caiu no meio do processo anterior
+        const { error } = await supabase.from('entries').upsert([entry], { onConflict: 'id' });
+        
         if (!error) {
           await markEntryAsSynced(entry.id);
           // Atualiza KM/Horímetro no servidor
@@ -44,20 +75,21 @@ const App: React.FC = () => {
             current_km: entry.km,
             current_horimetro: entry.horimetro
           }).eq('id', entry.vehicle_id);
+          
+          // Atualiza o contador imediatamente para feedback visual
+          await checkPendingSyncs();
+        } else {
+          console.error(`Erro ao sincronizar item ${entry.id}:`, error.message);
         }
       } catch (err) {
-        console.error('Falha ao sincronizar entrada:', entry.id, err);
+        console.error('Falha crítica na sincronização do item:', entry.id, err);
       }
     }
     
-    fetchEntries();
-    checkPendingSyncs();
-  }, []);
-
-  const checkPendingSyncs = async () => {
-    const pending = await getOfflineEntries();
-    setPendingSyncCount(pending.length);
-  };
+    syncingRef.current = false;
+    await fetchEntries();
+    await checkPendingSyncs();
+  }, [checkPendingSyncs, fetchEntries]);
 
   const initAppData = async () => {
     setIsLoading(true);
@@ -81,8 +113,9 @@ const App: React.FC = () => {
           setUsers(uRes.data as User[]);
           await saveMetadata('users', uRes.data);
         }
+        // Tenta sincronizar se houver algo pendente logo no início
+        syncOfflineData();
       } else {
-        // Carrega do Cache Local se estiver offline
         const cachedVehicles = await getMetadata('vehicles');
         const cachedItems = await getMetadata('checklist_items');
         const cachedUsers = await getMetadata('users');
@@ -102,7 +135,7 @@ const App: React.FC = () => {
     
     const handleOnline = () => {
       setIsOnline(true);
-      syncOfflineData();
+      setTimeout(syncOfflineData, 1000); // Aguarda 1s para estabilizar a conexão
     };
     const handleOffline = () => setIsOnline(false);
 
@@ -115,29 +148,11 @@ const App: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [syncOfflineData]);
-
-  const fetchEntries = async () => {
-    if (!navigator.onLine) return;
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('entries')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      if (data) setEntries(data as ChecklistEntry[]);
-    } catch (err) {
-      console.error('Erro ao buscar entradas:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [syncOfflineData, checkPendingSyncs]);
 
   useEffect(() => {
     if (user) fetchEntries();
-  }, [user]);
+  }, [user, fetchEntries]);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
@@ -151,8 +166,8 @@ const App: React.FC = () => {
   const handleSubmitEntry = async (entry: ChecklistEntry) => {
     if (!navigator.onLine) {
       await saveOfflineEntry(entry);
-      checkPendingSyncs();
-      alert('Você está offline. A vistoria foi salva no aparelho e será enviada automaticamente assim que houver conexão.');
+      await checkPendingSyncs();
+      alert('Vistoria salva no aparelho. Será enviada automaticamente ao detectar internet.');
       setView('dashboard');
       return;
     }
@@ -171,10 +186,9 @@ const App: React.FC = () => {
       await initAppData();
       setView('dashboard');
     } catch (err) {
-      console.error('Erro ao salvar entrada:', err);
-      // Fallback para offline se falhar o envio mesmo online
+      console.error('Erro no envio direto, salvando offline:', err);
       await saveOfflineEntry(entry);
-      checkPendingSyncs();
+      await checkPendingSyncs();
       setView('dashboard');
     } finally {
       setIsLoading(false);
@@ -269,7 +283,6 @@ const App: React.FC = () => {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-4 pl-2 sm:pl-4 border-l border-white/10 shrink-0">
-            {/* Info do Usuário */}
             <div className="hidden sm:flex flex-col items-end mr-1">
               <span className="text-[11px] font-black uppercase tracking-tight truncate max-w-[120px]">{user.name}</span>
               <div className="flex items-center gap-2 mt-0.5">
@@ -287,7 +300,7 @@ const App: React.FC = () => {
 
       {pendingSyncCount > 0 && isOnline && (
         <div className="bg-[#1E90FF] text-white p-3 text-center text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-          Sincronizando {pendingSyncCount} vistorias pendentes...
+          Sincronizando {pendingSyncCount} {pendingSyncCount === 1 ? 'vistoria pendente' : 'vistorias pendentes'}...
         </div>
       )}
 
