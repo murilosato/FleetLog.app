@@ -209,11 +209,21 @@ const App: React.FC = () => {
 
   if (!user) return <Login onLogin={handleLogin} />;
 
+  const getRoleLabel = (role: string) => {
+    switch(role) {
+      case 'ADMIN': return 'Administrador';
+      case 'OPERACAO': return 'Operação';
+      case 'MANUTENCAO': return 'Manutenção';
+      case 'OPERADOR': return 'Motorista';
+      default: return role;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-[#0A2540] text-white shadow-lg sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('dashboard')}>
+        <div className="max-w-7xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => setView('dashboard')}>
             <div className="relative w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center font-black text-[#0A2540] text-base sm:text-lg overflow-hidden shadow-inner">
                 eS
                 <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[#0A2540] flex items-center justify-center shadow-lg ${isOnline ? 'bg-[#58CC02]' : 'bg-orange-500'}`}>
@@ -224,7 +234,7 @@ const App: React.FC = () => {
                     )}
                 </div>
             </div>
-            <div className="flex flex-col">
+            <div className="hidden xs:flex flex-col">
               <h1 className="font-black text-base sm:text-xl tracking-tight leading-none">ecoSCheck</h1>
               <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-0.5 ${isOnline ? 'text-[#58CC02]' : 'text-orange-400'}`}>
                 {isOnline ? 'Online' : 'Modo Offline'}
@@ -232,35 +242,44 @@ const App: React.FC = () => {
             </div>
           </div>
           
-          <nav className="flex items-center gap-1 sm:gap-3">
+          <nav className="flex items-center gap-1 sm:gap-3 mx-2">
             <button 
               onClick={() => setView('dashboard')}
               className={`p-2 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all ${view === 'dashboard' ? 'bg-[#1E90FF] text-white shadow-lg' : 'hover:bg-white/10 opacity-60'}`}
             >
-              <span className="hidden sm:inline">Início</span>
-              <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+              <span className="hidden md:inline">Início</span>
+              <svg className="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             </button>
             <button 
               onClick={() => setView('history')}
               className={`p-2 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all ${view === 'history' ? 'bg-[#1E90FF] text-white shadow-lg' : 'hover:bg-white/10 opacity-60'}`}
             >
-              <span className="hidden sm:inline">Histórico</span>
-              <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span className="hidden md:inline">Histórico</span>
+              <svg className="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </button>
             {user.role === 'ADMIN' && (
               <button 
                 onClick={() => setView('admin')}
                 className={`p-2 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all ${view === 'admin' ? 'bg-[#1E90FF] text-white shadow-lg' : 'hover:bg-white/10 opacity-60'}`}
               >
-                <span className="hidden sm:inline">Gestão</span>
-                <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span className="hidden md:inline">Gestão</span>
+                <svg className="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               </button>
             )}
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-4 pl-2 sm:pl-4 border-l border-white/10">
-            <button onClick={handleLogout} className="p-2 sm:p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <div className="flex items-center gap-2 sm:gap-4 pl-2 sm:pl-4 border-l border-white/10 shrink-0">
+            {/* Info do Usuário */}
+            <div className="hidden sm:flex flex-col items-end mr-1">
+              <span className="text-[11px] font-black uppercase tracking-tight truncate max-w-[120px]">{user.name}</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{user.matricula}</span>
+                <span className="text-[7px] font-black bg-[#1E90FF] text-white px-1.5 py-0.5 rounded uppercase tracking-widest">{getRoleLabel(user.role)}</span>
+              </div>
+            </div>
+
+            <button onClick={handleLogout} className="p-2 sm:p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors shrink-0 group">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
           </div>
         </div>
