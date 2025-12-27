@@ -242,19 +242,19 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
     const response = itemResponses[item.id];
 
     return (
-      <div key={item.id} className={`py-6 border-b border-slate-50 last:border-0 transition-all ${isDivergent ? 'bg-red-50/50 -mx-4 px-4 rounded-3xl' : ''}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+      <div key={item.id} className={`py-5 sm:py-6 border-b border-slate-50 last:border-0 transition-all ${isDivergent ? 'bg-red-50/50 -mx-4 px-4 rounded-[1.5rem] sm:rounded-3xl' : ''}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
           <div className="flex items-start gap-3 flex-1">
-             <p className="font-black text-[#0A2540] text-sm leading-tight">{item.label} <span className="text-red-500">*</span></p>
+             <p className="font-black text-[#0A2540] text-sm sm:text-base leading-tight">{item.label} <span className="text-red-500">*</span></p>
           </div>
-          {isDivergent && <span className="text-[8px] bg-red-600 text-white px-2 py-0.5 rounded-lg font-black uppercase tracking-widest">Divergência</span>}
+          {isDivergent && <span className="text-[9px] sm:text-[10px] bg-red-600 text-white px-2.5 py-1 rounded-lg font-black uppercase tracking-widest self-start sm:self-auto">Divergência</span>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:gap-3">
           {Object.values(ItemStatus).map(s => (
             <button 
               key={s}
               onClick={() => handleStatusChange(item.id, s)}
-              className={`flex-1 py-3 text-[10px] font-black rounded-2xl border-2 transition-all ${response?.status === s ? (s === ItemStatus.OK ? 'bg-[#58CC02] border-[#58CC02] text-white shadow-lg' : (s === ItemStatus.DEFECTIVE ? 'bg-red-600 border-red-600 text-white shadow-lg' : 'bg-orange-500 border-orange-500 text-white shadow-lg')) : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'}`}
+              className={`flex-1 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black rounded-xl sm:rounded-2xl border-2 transition-all active:scale-95 ${response?.status === s ? (s === ItemStatus.OK ? 'bg-[#58CC02] border-[#58CC02] text-white shadow-lg' : (s === ItemStatus.DEFECTIVE ? 'bg-red-600 border-red-600 text-white shadow-lg' : 'bg-orange-500 border-orange-500 text-white shadow-lg')) : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'}`}
             >{s}</button>
           ))}
         </div>
@@ -262,7 +262,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
           <input 
             value={response.observations || ''}
             placeholder="Relate o motivo aqui..." 
-            className="w-full mt-3 p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:border-slate-300"
+            className="w-full mt-3 p-4 bg-slate-50 border-2 border-slate-100 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-slate-700 outline-none focus:border-slate-300 transition-all"
             onChange={e => setItemResponses(prev => ({...prev, [item.id]: {...(prev[item.id] as any), observations: e.target.value}}))}
           />
         )}
@@ -275,17 +275,17 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
       {/* Alerta Customizado Centralizado */}
       {showAlert && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#0A2540]/60 backdrop-blur-md">
-          <div className="bg-white p-10 rounded-[3rem] shadow-2xl max-w-sm w-full text-center space-y-8 animate-in zoom-in-95 duration-200">
-             <div className="w-24 h-24 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-4 border-red-100 shadow-xl">
-                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl max-w-sm w-full text-center space-y-6 sm:space-y-8 animate-in zoom-in-95 duration-200">
+             <div className="w-20 h-20 sm:w-24 sm:h-24 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-4 border-red-100 shadow-xl">
+                <svg className="w-10 h-10 sm:w-12 sm:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
              </div>
              <div className="space-y-3">
-                <h3 className="text-2xl font-black text-[#0A2540] uppercase tracking-tight">Atenção</h3>
-                <p className="text-slate-500 font-bold leading-relaxed">{alertMessage}</p>
+                <h3 className="text-xl sm:text-2xl font-black text-[#0A2540] uppercase tracking-tight">Atenção</h3>
+                <p className="text-slate-500 font-bold leading-relaxed text-sm">{alertMessage}</p>
              </div>
              <button 
               onClick={() => setShowAlert(false)}
-              className="w-full py-5 bg-[#0A2540] text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all"
+              className="w-full py-4 sm:py-5 bg-[#0A2540] text-white rounded-2xl sm:rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all"
              >
                ENTENDI, VOU REVISAR
              </button>
@@ -293,53 +293,53 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
         </div>
       )}
 
-      <div className="flex gap-2 mb-10 px-6 sm:px-0">
+      <div className="flex gap-2 mb-8 sm:mb-10 px-6 sm:px-0">
         {[0, 1, 2, 3].map((s) => (
-          <div key={s} className={`h-2 flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-[#1E90FF] shadow-lg shadow-blue-100' : 'bg-slate-100'}`}></div>
+          <div key={s} className={`h-1.5 sm:h-2 flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-[#1E90FF] shadow-lg shadow-blue-100' : 'bg-slate-100'}`}></div>
         ))}
       </div>
 
-      <div className="bg-white rounded-[3.5rem] shadow-sm border border-slate-100 p-8 sm:p-12 mb-8">
-        <div className="flex justify-between items-start mb-12">
+      <div className="bg-white rounded-[2rem] sm:rounded-[3.5rem] shadow-sm border border-slate-100 p-6 sm:p-12 mb-8">
+        <div className="flex justify-between items-start mb-8 sm:mb-12">
           <div>
-            <h2 className="text-3xl font-black text-[#0A2540] tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-[#0A2540] tracking-tight">
               {step === 0 && 'Informações Iniciais'}
-              {step === 1 && 'Etapa 1: Veículo Desligado'}
-              {step === 2 && 'Etapa 2: Funcionamento'}
+              {step === 1 && 'Etapa 1: Desligado'}
+              {step === 2 && 'Etapa 2: Ligado'}
               {step === 3 && 'Finalização'}
             </h2>
-            <p className="text-slate-400 font-bold text-sm mt-2">
-              {step === 3 ? 'Revise as pendências e assine' : 'Preencha todos os campos obrigatórios (*)'}
+            <p className="text-slate-400 font-bold text-xs sm:text-sm mt-1 sm:mt-2">
+              {step === 3 ? 'Revise as pendências e assine' : 'Preencha todos os campos (*)'}
             </p>
           </div>
-          <div className="bg-[#1E90FF]/10 px-5 py-2.5 rounded-2xl border border-[#1E90FF]/20">
-            <span className="text-xs font-black text-[#1E90FF]">{step}/3</span>
+          <div className="bg-[#1E90FF]/10 px-3.5 sm:px-5 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl border border-[#1E90FF]/20">
+            <span className="text-[10px] sm:text-xs font-black text-[#1E90FF]">{step}/3</span>
           </div>
         </div>
 
         {step === 0 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-             <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Operação</label>
-                  <select className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all" value={type} onChange={e => setType(e.target.value as any)}>
+          <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4">
+             <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Operação</label>
+                  <select className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={type} onChange={e => setType(e.target.value as any)}>
                     <option value="Saída">Saída</option>
                     <option value="Retorno">Retorno</option>
                   </select>
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Turno</label>
-                  <select className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all" value={shift} onChange={e => setShift(e.target.value)}>
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Turno</label>
+                  <select className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={shift} onChange={e => setShift(e.target.value)}>
                     <option value="Diurno">Diurno</option>
                     <option value="Noturno">Noturno</option>
                   </select>
                 </div>
              </div>
 
-             <div className="space-y-3">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prefixo ecoSCheck</label>
+             <div className="space-y-2 sm:space-y-3">
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Prefixo ecoSCheck</label>
                 <select 
-                  className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all"
+                  className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base"
                   onChange={e => {
                     const v = vehicles.find(v => v.id === e.target.value);
                     if (v) {
@@ -349,36 +349,36 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
                     }
                   }}
                 >
-                  <option value="">Buscar prefixo da frota...</option>
+                  <option value="">Buscar prefixo...</option>
                   {activeVehicles.map(v => <option key={v.id} value={v.id}>{v.prefix} - {v.plate}</option>)}
                 </select>
                 {selectedVehicle && (
-                  <div className="flex gap-4 px-4 mt-2">
-                    <p className="text-[10px] font-black text-[#58CC02] uppercase">Sistema KM: {selectedVehicle.current_km}</p>
-                    <p className="text-[10px] font-black text-[#58CC02] uppercase">Sistema HOR: {selectedVehicle.current_horimetro}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 px-2 mt-1 sm:mt-2">
+                    <p className="text-[10px] font-black text-[#58CC02] uppercase tracking-wider">Sist. KM: {selectedVehicle.current_km}</p>
+                    <p className="text-[10px] font-black text-[#58CC02] uppercase tracking-wider">Sist. HOR: {selectedVehicle.current_horimetro}</p>
                   </div>
                 )}
              </div>
 
-             <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">KM Atual</label>
-                  <input type="number" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all" value={km} onChange={e => setKm(Number(e.target.value))} />
+             <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">KM Atual</label>
+                  <input type="number" className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={km} onChange={e => setKm(Number(e.target.value))} />
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Horímetro</label>
-                  <input type="number" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all" value={horimetro} onChange={e => setHorimetro(Number(e.target.value))} />
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Horímetro</label>
+                  <input type="number" className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={horimetro} onChange={e => setHorimetro(Number(e.target.value))} />
                 </div>
              </div>
           </div>
         )}
 
         {step === 1 && (
-          <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+          <div className="space-y-10 sm:space-y-12 animate-in fade-in slide-in-from-right-4">
             {Object.keys(stage1Items).map((cat) => (
-              <div key={cat} className="space-y-5">
-                <h3 className="text-[10px] font-black text-[#1E90FF] uppercase tracking-[0.3em] bg-blue-50/50 px-5 py-2.5 rounded-xl inline-block border border-blue-100">{cat}</h3>
-                <div className="space-y-2">
+              <div key={cat} className="space-y-4 sm:space-y-5">
+                <h3 className="text-[10px] sm:text-[11px] font-black text-[#1E90FF] uppercase tracking-[0.2em] bg-blue-50/50 px-4 py-2 rounded-lg sm:rounded-xl inline-block border border-blue-100">{cat}</h3>
+                <div className="space-y-1 sm:space-y-2">
                   {stage1Items[cat].map(renderItemRow)}
                 </div>
               </div>
@@ -387,11 +387,11 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
         )}
 
         {step === 2 && (
-          <div className="space-y-12 animate-in fade-in slide-in-from-right-4">
+          <div className="space-y-10 sm:space-y-12 animate-in fade-in slide-in-from-right-4">
             {Object.keys(stage2Items).map((cat) => (
-              <div key={cat} className="space-y-5">
-                <h3 className="text-[10px] font-black text-[#1E90FF] uppercase tracking-[0.3em] bg-blue-50/50 px-5 py-2.5 rounded-xl inline-block border border-blue-100">{cat}</h3>
-                <div className="space-y-2">
+              <div key={cat} className="space-y-4 sm:space-y-5">
+                <h3 className="text-[10px] sm:text-[11px] font-black text-[#1E90FF] uppercase tracking-[0.2em] bg-blue-50/50 px-4 py-2 rounded-lg sm:rounded-xl inline-block border border-blue-100">{cat}</h3>
+                <div className="space-y-1 sm:space-y-2">
                   {stage2Items[cat].map(renderItemRow)}
                 </div>
               </div>
@@ -400,69 +400,69 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
         )}
 
         {step === 3 && (
-          <div className="space-y-10 animate-in fade-in zoom-in-95">
-             <div className="space-y-5">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">Resumo da Inspeção</h4>
+          <div className="space-y-8 sm:space-y-10 animate-in fade-in zoom-in-95">
+             <div className="space-y-4 sm:space-y-5">
+                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">Resumo da Inspeção</h4>
                 {issuesSummary.length > 0 ? (
-                  <div className="bg-red-50/50 rounded-[2.5rem] p-8 border border-red-100 space-y-4">
+                  <div className="bg-red-50/50 rounded-[1.8rem] sm:rounded-[2.5rem] p-6 sm:p-8 border border-red-100 space-y-3 sm:space-y-4">
                     {issuesSummary.map(issue => (
-                      <div key={issue.id} className="flex items-center justify-between border-b border-red-100/50 last:border-0 pb-3 last:pb-0">
-                        <span className="text-xs font-black text-slate-700">{issue.label}</span>
-                        <span className={`text-[9px] font-black px-3 py-1.5 rounded-xl text-white shadow-sm ${issue.status === ItemStatus.DEFECTIVE ? 'bg-red-600' : 'bg-orange-500'}`}>{issue.status}</span>
+                      <div key={issue.id} className="flex items-center justify-between border-b border-red-100/50 last:border-0 pb-2 sm:pb-3 last:pb-0 gap-3">
+                        <span className="text-xs sm:text-sm font-black text-slate-700 leading-tight">{issue.label}</span>
+                        <span className={`text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-white shadow-sm shrink-0 ${issue.status === ItemStatus.DEFECTIVE ? 'bg-red-600' : 'bg-orange-500'}`}>{issue.status}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-[#58CC02]/10 rounded-[2.5rem] p-10 border border-[#58CC02]/20 text-center">
-                    <div className="w-16 h-16 bg-[#58CC02] text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl shadow-green-100">
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>
+                  <div className="bg-[#58CC02]/10 rounded-[1.8rem] sm:rounded-[2.5rem] p-8 sm:p-10 border border-[#58CC02]/20 text-center">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#58CC02] text-white rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-xl shadow-green-100">
+                        <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <p className="text-sm font-black text-[#58CC02] uppercase tracking-widest">Aprovado sem Irregularidades</p>
-                    <p className="text-[10px] text-green-600 font-bold mt-1">Todos os itens foram verificados e estão em conformidade.</p>
+                    <p className="text-xs sm:text-sm font-black text-[#58CC02] uppercase tracking-widest">Aprovado sem Falhas</p>
+                    <p className="text-[10px] text-green-600 font-bold mt-1">Todos os itens em conformidade.</p>
                   </div>
                 )}
              </div>
 
-             <div className="pt-10 border-t border-slate-100 space-y-6 text-center">
-                <div className={`p-10 rounded-[3rem] border-4 transition-all ${isSigned ? 'bg-[#0A2540] border-[#0A2540] text-white shadow-2xl' : 'bg-slate-50 border-dashed border-slate-200 text-slate-400'}`}>
+             <div className="pt-8 sm:pt-10 border-t border-slate-100 space-y-5 sm:space-y-6 text-center">
+                <div className={`p-6 sm:p-10 rounded-[1.8rem] sm:rounded-[3rem] border-4 transition-all ${isSigned ? 'bg-[#0A2540] border-[#0A2540] text-white shadow-2xl' : 'bg-slate-50 border-dashed border-slate-200 text-slate-400'}`}>
                   {isSigned ? (
                     <div>
-                       <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-3">Vistoria Assinada por</p>
-                       <p className="text-3xl font-black">{user.name}</p>
-                       <button onClick={() => setIsSigned(false)} className="mt-6 text-[10px] font-black uppercase tracking-widest border border-white/20 px-6 py-2 rounded-full hover:bg-white/10">Refazer Assinatura</button>
+                       <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-2 sm:mb-3">Vistoria Assinada por</p>
+                       <p className="text-2xl sm:text-3xl font-black">{user.name}</p>
+                       <button onClick={() => setIsSigned(false)} className="mt-4 sm:mt-6 text-[10px] font-black uppercase tracking-widest border border-white/20 px-5 sm:px-6 py-1.5 sm:py-2 rounded-full hover:bg-white/10 transition-colors">Refazer</button>
                     </div>
                   ) : (
-                    <div className="space-y-6">
-                       <p className="text-sm font-bold text-slate-600 leading-relaxed px-6">Eu, <span className="text-[#0A2540] font-black uppercase">{user.name}</span>, declaro que as informações acima condizem com o estado real do veículo.</p>
-                       <button onClick={() => setIsSigned(true)} className="bg-[#1E90FF] text-white px-12 py-5 rounded-[2rem] font-black text-xs shadow-2xl shadow-blue-200 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest">Confirmar e Assinar</button>
+                    <div className="space-y-5 sm:space-y-6">
+                       <p className="text-xs sm:text-sm font-bold text-slate-600 leading-relaxed px-4 sm:px-6">Eu, <span className="text-[#0A2540] font-black uppercase">{user.name}</span>, declaro que as informações acima condizem com o estado real do veículo.</p>
+                       <button onClick={() => setIsSigned(true)} className="bg-[#1E90FF] text-white px-10 py-4 sm:px-12 sm:py-5 rounded-xl sm:rounded-[2rem] font-black text-xs shadow-2xl shadow-blue-200 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest">Confirmar e Assinar</button>
                     </div>
                   )}
                 </div>
              </div>
 
              <textarea 
-                className="w-full p-6 bg-slate-50 border-2 border-slate-50 rounded-[2.5rem] h-32 font-bold outline-none focus:bg-white focus:border-[#1E90FF] transition-all"
+                className="w-full p-4 sm:p-6 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[2.5rem] h-28 sm:h-32 font-bold outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-xs sm:text-sm"
                 value={generalObs}
                 onChange={e => setGeneralObs(e.target.value)}
-                placeholder="Observações adicionais da operação..."
+                placeholder="Observações adicionais..."
              />
           </div>
         )}
       </div>
 
-      <div className="flex gap-4 px-6 sm:px-0">
-        <button onClick={onCancel} className="px-8 py-5 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-600">Cancelar</button>
+      <div className="flex gap-3 sm:gap-4 px-6 sm:px-0">
+        <button onClick={onCancel} className="px-4 py-4 sm:px-8 sm:py-5 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-600">Cancelar</button>
         <div className="flex-1"></div>
-        {step > 0 && <button onClick={() => setStep(step - 1)} className="px-10 py-5 bg-slate-100 text-slate-600 rounded-[2rem] font-black text-[10px] uppercase tracking-widest">Voltar</button>}
+        {step > 0 && <button onClick={() => setStep(step - 1)} className="px-6 py-4 sm:px-10 sm:py-5 bg-slate-100 text-slate-600 rounded-xl sm:rounded-[2rem] font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Voltar</button>}
         {step < 3 ? (
-          <button onClick={handleNext} className="px-14 py-5 bg-[#1E90FF] text-white rounded-[2rem] font-black text-xs shadow-2xl shadow-blue-100 hover:bg-[#0A2540] transition-all uppercase tracking-widest">Continuar</button>
+          <button onClick={handleNext} className="px-10 py-4 sm:px-14 sm:py-5 bg-[#1E90FF] text-white rounded-xl sm:rounded-[2rem] font-black text-xs shadow-2xl shadow-blue-100 hover:bg-[#0A2540] transition-all uppercase tracking-widest active:scale-95">Próximo</button>
         ) : (
           <button 
             onClick={handleSubmit} 
             disabled={!isSigned || isSubmitting}
-            className={`px-14 py-5 rounded-[2rem] font-black text-xs shadow-2xl transition-all uppercase tracking-widest ${isSigned && !isSubmitting ? 'bg-[#58CC02] text-white shadow-green-100' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+            className={`px-10 py-4 sm:px-14 sm:py-5 rounded-xl sm:rounded-[2rem] font-black text-xs shadow-2xl transition-all uppercase tracking-widest active:scale-95 ${isSigned && !isSubmitting ? 'bg-[#58CC02] text-white shadow-green-100' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
           >
-            {isSubmitting ? 'Enviando...' : 'Finalizar e Enviar'}
+            {isSubmitting ? 'Enviando...' : 'Finalizar'}
           </button>
         )}
       </div>
