@@ -99,7 +99,7 @@ const App: React.FC = () => {
     setIsSummarizing(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Analise os últimos relatórios de inspeção da frota SOLURB.
+      const prompt = `Analise os últimos relatórios de inspeção da frota ecoSCheck.
       Dados: ${JSON.stringify(entries.slice(0, 10).map(e => ({
         prefix: e.prefix,
         hasIssues: e.has_issues,
@@ -124,30 +124,36 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-emerald-700 text-white shadow-lg sticky top-0 z-50">
+      <header className="bg-[#0A2540] text-white shadow-lg sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('dashboard')}>
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center font-bold text-emerald-700">S</div>
-            <h1 className="font-bold hidden sm:block">SOLURB DIGITAL</h1>
+            <div className="relative w-8 h-8 bg-white rounded-lg flex items-center justify-center font-black text-[#0A2540] text-sm overflow-hidden">
+                <div className="absolute inset-0.5 border border-slate-200 opacity-20"></div>
+                eS
+                <div className="absolute -bottom-1 -right-1 bg-[#58CC02] w-4 h-4 rounded-full border-2 border-[#0A2540] flex items-center justify-center">
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>
+                </div>
+            </div>
+            <h1 className="font-black text-lg tracking-tight hidden sm:block">ecoSCheck</h1>
           </div>
           
           <nav className="flex items-center gap-1 sm:gap-2">
             <button 
               onClick={() => setView('dashboard')}
-              className={`px-3 py-1 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'dashboard' ? 'bg-white text-emerald-700 shadow-md' : 'hover:bg-emerald-600'}`}
+              className={`px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all ${view === 'dashboard' ? 'bg-[#1E90FF] text-white shadow-lg' : 'hover:bg-white/10 opacity-70 hover:opacity-100'}`}
             >
               Início
             </button>
             <button 
               onClick={() => setView('history')}
-              className={`px-3 py-1 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'history' ? 'bg-white text-emerald-700 shadow-md' : 'hover:bg-emerald-600'}`}
+              className={`px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all ${view === 'history' ? 'bg-[#1E90FF] text-white shadow-lg' : 'hover:bg-white/10 opacity-70 hover:opacity-100'}`}
             >
               Histórico
             </button>
             {user.role === 'ADMIN' && (
               <button 
                 onClick={() => setView('admin')}
-                className={`px-3 py-1 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'admin' ? 'bg-white text-emerald-700 shadow-md' : 'hover:bg-emerald-600'}`}
+                className={`px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all ${view === 'admin' ? 'bg-[#1E90FF] text-white shadow-lg' : 'hover:bg-white/10 opacity-70 hover:opacity-100'}`}
               >
                 Gestão
               </button>
@@ -155,11 +161,11 @@ const App: React.FC = () => {
           </nav>
 
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex flex-col items-end leading-none border-l border-emerald-600 pl-3">
+            <div className="hidden md:flex flex-col items-end leading-none border-l border-white/20 pl-3">
               <span className="font-bold text-sm">{user.name}</span>
-              <span className="text-[9px] opacity-70 uppercase font-black">{user.role}</span>
+              <span className="text-[9px] opacity-70 uppercase font-black text-[#1E90FF]">{user.role}</span>
             </div>
-            <button onClick={handleLogout} className="p-2 hover:bg-emerald-800 rounded-full transition-colors" title="Sair">
+            <button onClick={handleLogout} className="p-2 hover:bg-white/10 rounded-full transition-colors" title="Sair">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
           </div>

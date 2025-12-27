@@ -95,85 +95,83 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-3 bg-white shadow-sm border rounded-2xl hover:bg-slate-50 transition-colors">
-            <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+    <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+        <div className="flex items-center gap-6">
+          <button onClick={onBack} className="p-4 bg-white shadow-sm border border-slate-100 rounded-2xl hover:bg-slate-50 transition-all">
+            <svg className="w-6 h-6 text-[#0A2540]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           </button>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Painel de Gestão</h2>
+          <h2 className="text-4xl font-black text-[#0A2540] tracking-tight">Gestão ecoSCheck</h2>
         </div>
-        <div className="flex bg-slate-200 p-1 rounded-2xl w-full md:w-auto">
+        <div className="flex bg-slate-100 p-2 rounded-[2rem] w-full md:w-auto shadow-inner">
           <button 
             onClick={() => setTab('vehicles')} 
-            className={`flex-1 md:flex-none px-10 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${tab === 'vehicles' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex-1 md:flex-none px-10 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all ${tab === 'vehicles' ? 'bg-[#1E90FF] text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            Frota de Veículos
+            Frota
           </button>
           <button 
             onClick={() => setTab('items')} 
-            className={`flex-1 md:flex-none px-10 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${tab === 'items' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex-1 md:flex-none px-10 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all ${tab === 'items' ? 'bg-[#1E90FF] text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            Itens do Checklist
+            Checklist
           </button>
         </div>
       </div>
 
       {tab === 'vehicles' && (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          {/* Cadastro no Topo */}
-          <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
-            <h3 className="font-black text-slate-800 text-lg mb-6 uppercase flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-              Cadastrar Novo Veículo
+        <div className="space-y-10 animate-in fade-in duration-500">
+          <div className="bg-white p-10 rounded-[3.5rem] border shadow-sm border-slate-100">
+            <h3 className="font-black text-[#0A2540] text-xl mb-8 uppercase flex items-center gap-4">
+              <div className="w-2 h-8 bg-[#1E90FF] rounded-full"></div>
+              Novo Veículo
             </h3>
-            <form onSubmit={handleAddVehicle} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Prefixo Solurb</label>
-                <input value={vPrefix} onChange={e => setVPrefix(e.target.value)} placeholder="Ex: 5001" className="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-sm focus:ring-2 focus:ring-emerald-200 outline-none" required />
+            <form onSubmit={handleAddVehicle} className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Prefixo</label>
+                <input value={vPrefix} onChange={e => setVPrefix(e.target.value)} placeholder="Ex: 5001" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#1E90FF] transition-all" required />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Placa</label>
-                <input value={vPlate} onChange={e => setVPlate(e.target.value)} placeholder="ABC1D23" className="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-sm focus:ring-2 focus:ring-emerald-200 outline-none" required />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Placa</label>
+                <input value={vPlate} onChange={e => setVPlate(e.target.value)} placeholder="ABC1D23" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#1E90FF] transition-all" required />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">KM Inicial</label>
-                <input type="number" value={vKm} onChange={e => setVKm(e.target.value)} placeholder="0" className="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-sm focus:ring-2 focus:ring-emerald-200 outline-none" />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">KM Inicial</label>
+                <input type="number" value={vKm} onChange={e => setVKm(e.target.value)} placeholder="0" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#1E90FF] transition-all" />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Horímetro Inicial</label>
-                <input type="number" value={vHor} onChange={e => setVHor(e.target.value)} placeholder="0" className="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-sm focus:ring-2 focus:ring-emerald-200 outline-none" />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Horímetro</label>
+                <input type="number" value={vHor} onChange={e => setVHor(e.target.value)} placeholder="0" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#1E90FF] transition-all" />
               </div>
               <button 
                 disabled={loading}
-                className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all disabled:opacity-50"
+                className="w-full py-5 bg-[#0A2540] text-white rounded-[1.8rem] font-black text-[10px] uppercase tracking-widest shadow-2xl hover:bg-[#1E90FF] transition-all disabled:opacity-50"
               >
-                {loading ? 'Processando...' : 'Adicionar Veículo'}
+                {loading ? 'Processando...' : 'Adicionar'}
               </button>
             </form>
           </div>
 
-          {/* Lista Abaixo */}
-          <div className="space-y-4">
-            <h3 className="font-black text-slate-800 text-lg uppercase flex items-center gap-3 ml-4">
-              <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-              Veículos Ativos e Inativos
+          <div className="space-y-6">
+            <h3 className="font-black text-[#0A2540] text-xl uppercase tracking-tight flex items-center gap-4 ml-6">
+              <div className="w-2 h-8 bg-[#58CC02] rounded-full"></div>
+              Lista da Frota
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {vehicles.map(v => (
-                <div key={v.id} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between group hover:border-emerald-200 transition-all shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl ${v.active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                <div key={v.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-50 flex items-center justify-between group hover:border-[#1E90FF] transition-all shadow-sm">
+                  <div className="flex items-center gap-5">
+                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-black text-2xl transition-all ${v.active ? 'bg-[#1E90FF]/10 text-[#1E90FF]' : 'bg-slate-100 text-slate-400'}`}>
                       {v.prefix}
                     </div>
                     <div>
-                      <p className="font-black text-slate-800 text-lg">{v.plate}</p>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">KM: {v.current_km} • Hor: {v.current_horimetro}</p>
+                      <p className="font-black text-[#0A2540] text-xl tracking-tighter">{v.plate}</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">KM: {v.current_km}</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => toggleVehicleStatus(v)}
-                    className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${v.active ? 'bg-emerald-100 text-emerald-600 hover:bg-red-50 hover:text-red-600' : 'bg-slate-100 text-slate-400 hover:bg-emerald-100 hover:text-emerald-600'}`}
+                    className={`px-5 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${v.active ? 'bg-[#58CC02]/10 text-[#58CC02] hover:bg-red-50 hover:text-red-600' : 'bg-slate-100 text-slate-400 hover:bg-[#1E90FF]/10 hover:text-[#1E90FF]'}`}
                   >
                     {v.active ? 'Ativo' : 'Inativo'}
                   </button>
@@ -185,21 +183,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
       )}
 
       {tab === 'items' && (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          {/* Cadastro no Topo */}
-          <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm">
-            <h3 className="font-black text-slate-800 text-lg mb-6 uppercase flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-              Cadastrar Novo Item de Checklist
+        <div className="space-y-10 animate-in fade-in duration-500">
+          <div className="bg-white p-10 rounded-[3.5rem] border shadow-sm border-slate-100">
+            <h3 className="font-black text-[#0A2540] text-xl mb-8 uppercase flex items-center gap-4">
+              <div className="w-2 h-8 bg-[#1E90FF] rounded-full"></div>
+              Novo Item Técnico
             </h3>
-            <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Descrição do Item</label>
-                <input value={iLabel} onChange={e => setILabel(e.target.value)} placeholder="Ex: Faróis de Milha" className="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-sm focus:ring-2 focus:ring-emerald-200 outline-none" required />
+            <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Descrição</label>
+                <input value={iLabel} onChange={e => setILabel(e.target.value)} placeholder="Ex: Faróis de Milha" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#1E90FF] transition-all" required />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Categoria do Checklist</label>
-                <select value={iCategory} onChange={e => setICategory(e.target.value)} className="w-full p-4 bg-slate-50 border-0 rounded-2xl font-bold text-sm focus:ring-2 focus:ring-emerald-200 outline-none">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Categoria</label>
+                <select value={iCategory} onChange={e => setICategory(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#1E90FF] transition-all">
                   <option value="MOTOR (VEÍCULO DESLIGADO)">MOTOR (DESLIGADO)</option>
                   <option value="CABINE INTERNA/EXTERNA">CABINE</option>
                   <option value="BAÚ">BAÚ</option>
@@ -209,46 +206,45 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
               </div>
               <button 
                 disabled={loading}
-                className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all disabled:opacity-50"
+                className="w-full py-5 bg-[#0A2540] text-white rounded-[1.8rem] font-black text-[10px] uppercase tracking-widest shadow-2xl hover:bg-[#1E90FF] transition-all disabled:opacity-50"
               >
-                {loading ? 'Salvando...' : 'Adicionar ao Sistema'}
+                {loading ? 'Processando...' : 'Salvar Item'}
               </button>
             </form>
           </div>
 
-          {/* Lista Abaixo */}
-          <div className="space-y-4">
-            <h3 className="font-black text-slate-800 text-lg uppercase flex items-center gap-3 ml-4">
-              <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-              Itens do Checklist Oficiais (1-48) e Adicionais
+          <div className="space-y-6">
+            <h3 className="font-black text-[#0A2540] text-xl uppercase tracking-tight flex items-center gap-4 ml-6">
+              <div className="w-2 h-8 bg-[#58CC02] rounded-full"></div>
+              Configuração do Checklist
             </h3>
-            <div className="bg-white rounded-[2.5rem] border overflow-hidden shadow-sm">
+            <div className="bg-white rounded-[3.5rem] border border-slate-100 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b">
+                  <thead className="bg-slate-50/50 border-b border-slate-100">
                     <tr>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">ID</th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Descrição do Item</th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Categoria</th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Status / Ação</th>
+                      <th className="px-10 py-6 text-[10px] font-black uppercase text-slate-300 tracking-[0.2em]">ID</th>
+                      <th className="px-10 py-6 text-[10px] font-black uppercase text-slate-300 tracking-[0.2em]">Descrição Técnica</th>
+                      <th className="px-10 py-6 text-[10px] font-black uppercase text-slate-300 tracking-[0.2em]">Sessão</th>
+                      <th className="px-10 py-6 text-[10px] font-black uppercase text-slate-300 tracking-[0.2em] text-right">Controle</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {items.sort((a,b) => a.id - b.id).map(item => (
-                      <tr key={item.id} className={`hover:bg-slate-50/50 transition-colors ${item.active === false ? 'opacity-50' : ''}`}>
-                        <td className="px-8 py-5 text-xs font-black text-slate-300">#{item.id}</td>
-                        <td className="px-8 py-5">
-                          <p className="text-sm font-bold text-slate-700">{item.label}</p>
+                      <tr key={item.id} className={`hover:bg-slate-50/30 transition-colors ${item.active === false ? 'opacity-40 grayscale' : ''}`}>
+                        <td className="px-10 py-6 text-xs font-black text-slate-200">#{item.id}</td>
+                        <td className="px-10 py-6">
+                          <p className="text-sm font-black text-[#0A2540] tracking-tight">{item.label}</p>
                         </td>
-                        <td className="px-8 py-5">
-                          <span className="text-[9px] bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg font-black uppercase tracking-tighter">{item.category}</span>
+                        <td className="px-10 py-6">
+                          <span className="text-[9px] bg-slate-100 text-slate-400 px-3 py-1.5 rounded-xl font-black uppercase tracking-tighter border border-slate-200">{item.category}</span>
                         </td>
-                        <td className="px-8 py-5 text-right">
+                        <td className="px-10 py-6 text-right">
                           <button 
                             onClick={() => toggleItemStatus(item)}
-                            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${item.active !== false ? 'bg-emerald-100 text-emerald-600 hover:bg-red-50 hover:text-red-600' : 'bg-slate-100 text-slate-400 hover:bg-emerald-100 hover:text-emerald-600'}`}
+                            className={`px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${item.active !== false ? 'bg-[#58CC02]/10 text-[#58CC02] hover:bg-red-50 hover:text-red-600' : 'bg-slate-100 text-slate-300 hover:bg-[#1E90FF]/10 hover:text-[#1E90FF]'}`}
                           >
-                            {item.active !== false ? 'Ativo' : 'Desativado'}
+                            {item.active !== false ? 'Ativo' : 'Inativo'}
                           </button>
                         </td>
                       </tr>
