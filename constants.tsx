@@ -1,6 +1,5 @@
 
-import { ChecklistSection } from './types';
-
+// Removed unused and non-existent import ChecklistSection
 export const OFFICIAL_SOLURB_ITEMS = [
   // MOTOR
   { id: 1, label: "1. Nível de Óleo Hidráulico - Recolher Pistões", category: "MOTOR (VEÍCULO DESLIGADO)" },

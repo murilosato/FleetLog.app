@@ -11,11 +11,6 @@ export interface ChecklistItem {
   surveyed: boolean;
 }
 
-export interface ChecklistSection {
-  title: string;
-  items: ChecklistItem[];
-}
-
 export interface User {
   id: string;
   name: string;
@@ -30,6 +25,8 @@ export interface Vehicle {
   plate: string;
   current_km: number;
   current_horimetro: number;
+  max_km_jump: number;
+  max_horimetro_jump: number;
   active: boolean;
 }
 
@@ -38,6 +35,18 @@ export interface DBChecklistItem {
   label: string;
   category: string;
   active?: boolean;
+}
+
+export interface FuelType {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
+export interface LubricantType {
+  id: number;
+  name: string;
+  active: boolean;
 }
 
 export interface ChecklistEntry {
@@ -61,4 +70,35 @@ export interface ChecklistEntry {
   maintenance_user_id?: string;
   operation_checked?: boolean;
   operation_user_id?: string;
+}
+
+export interface RefuelingEntry {
+  id: string;
+  event_at: string;
+  vehicle_id: string;
+  prefix: string;
+  km: number;
+  horimetro: number;
+  fuel_type_id: number;
+  quantity: number;
+  arla_quantity?: number;
+  user_id: string;
+  created_at?: string;
+  fuel_name?: string;
+  user_name?: string;
+}
+
+export interface LubricantEntry {
+  id: string;
+  event_at: string;
+  vehicle_id: string;
+  prefix: string;
+  km: number;
+  horimetro: number;
+  lubricant_type_id: number;
+  quantity: number;
+  user_id: string;
+  created_at?: string;
+  lubricant_name?: string;
+  user_name?: string;
 }
