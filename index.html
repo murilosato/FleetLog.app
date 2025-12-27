@@ -4,6 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.json">
     <title>ecoSCheck - CheckList Digital</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +17,7 @@
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        input, select, textarea { font-size: 16px !important; } /* Previne zoom no iOS ao focar inputs */
+        input, select, textarea { font-size: 16px !important; } 
     </style>
 <script type="importmap">
 {
@@ -33,14 +37,11 @@
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     <script>
-      // Service Worker para Cache e Modo Offline
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('SW registrado:', registration.scope);
-          }).catch(err => {
-            console.log('SW falhou:', err);
-          });
+          navigator.serviceWorker.register('/sw.js').then(reg => {
+            console.log('SW ativo');
+          }).catch(err => console.log('SW erro:', err));
         });
       }
     </script>

@@ -102,6 +102,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-700">
+      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 bg-white p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] shadow-sm border border-slate-100">
         <div>
           <h2 className="text-2xl sm:text-3xl font-black text-[#0A2540] tracking-tight flex items-center gap-3 sm:gap-4">
