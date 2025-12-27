@@ -124,6 +124,13 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
     }
   };
 
+  const handleSurveyedToggle = (itemId: number, surveyed: boolean) => {
+    setItemResponses(prev => ({
+      ...prev,
+      [itemId]: { ...(prev[itemId] as any), surveyed, status: surveyed ? prev[itemId]?.status : null }
+    }));
+  };
+
   const triggerAlert = (msg: string) => {
     setAlertMessage(msg);
     setShowAlert(true);
@@ -147,18 +154,18 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
 
     if (step === 1) {
       const allS1 = Object.values(stage1Items).flat() as DBChecklistItem[];
-      const unanswered = allS1.filter(i => !itemResponses[i.id]?.status);
+      const unanswered = allS1.filter(i => itemResponses[i.id]?.surveyed && !itemResponses[i.id]?.status);
       if (unanswered.length > 0) {
-        triggerAlert("POSSUI ITENS PENDENTES DE PREENCHIMENTO");
+        triggerAlert("POSSUI ITENS VISTORIADOS PENDENTES DE STATUS (OK/DEFEITO/FALTA)");
         return;
       }
     }
 
     if (step === 2) {
       const allS2 = Object.values(stage2Items).flat() as DBChecklistItem[];
-      const unanswered = allS2.filter(i => !itemResponses[i.id]?.status);
+      const unanswered = allS2.filter(i => itemResponses[i.id]?.surveyed && !itemResponses[i.id]?.status);
       if (unanswered.length > 0) {
-        triggerAlert("POSSUI ITENS PENDENTES DE PREENCHIMENTO");
+        triggerAlert("POSSUI ITENS VISTORIADOS PENDENTES DE STATUS (OK/DEFEITO/FALTA)");
         return;
       }
     }
@@ -189,7 +196,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
         divergenceDetails = divergenceItems
           .map(id => {
             const item = validAvailableItems.find(i => i.id === id);
-            return item ? `${item.label}` : `Item ${id}`;
+            return item ? `${item.id}. ${item.label}` : `Item ${id}`;
           }).join(', ');
       }
 
@@ -231,40 +238,71 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
         const itemInfo = validAvailableItems.find(i => i.id.toString() === id);
         return {
           id,
-          label: itemInfo?.label || `Item ${id}`,
+          label: itemInfo ? `${itemInfo.id}. ${itemInfo.label}` : `Item ${id}`,
           status: (data as any).status
         };
+      });
+  }, [itemResponses, validAvailableItems]);
+
+  const nonSurveyedSummary = useMemo(() => {
+    return Object.entries(itemResponses)
+      .filter(([id, data]) => !(data as any).surveyed)
+      .map(([id, _]) => {
+        const itemInfo = validAvailableItems.find(i => i.id.toString() === id);
+        return itemInfo ? `${itemInfo.id}. ${itemInfo.label}` : `Item ${id}`;
       });
   }, [itemResponses, validAvailableItems]);
 
   const renderItemRow = (item: DBChecklistItem) => {
     const isDivergent = divergenceItems.includes(item.id);
     const response = itemResponses[item.id];
+    const isSurveyed = response?.surveyed ?? true;
+    const cleanLabel = item.label.replace(/^\d+\.\s*/, ''); // Remove numeração antiga se existir no texto
 
     return (
       <div key={item.id} className={`py-5 sm:py-6 border-b border-slate-50 last:border-0 transition-all ${isDivergent ? 'bg-red-50/50 -mx-4 px-4 rounded-[1.5rem] sm:rounded-3xl' : ''}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
-          <div className="flex items-start gap-3 flex-1">
-             <p className="font-black text-[#0A2540] text-sm sm:text-base leading-tight">{item.label} <span className="text-red-500">*</span></p>
+          <div className="flex flex-col gap-1 flex-1">
+             <p className={`font-black text-[#0A2540] text-sm sm:text-base leading-tight ${!isSurveyed ? 'opacity-40' : ''}`}>
+               <span className="text-[#1E90FF] mr-1">{item.id}.</span> {cleanLabel} <span className="text-red-500">*</span>
+             </p>
+             <div className="flex items-center gap-3 mt-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Item vistoriado?</span>
+                <div className="flex bg-slate-100 p-1 rounded-lg">
+                  <button 
+                    onClick={() => handleSurveyedToggle(item.id, true)}
+                    className={`px-3 py-1 rounded-md text-[9px] font-black transition-all ${isSurveyed ? 'bg-white text-[#1E90FF] shadow-sm' : 'text-slate-400'}`}
+                  >SIM</button>
+                  <button 
+                    onClick={() => handleSurveyedToggle(item.id, false)}
+                    className={`px-3 py-1 rounded-md text-[9px] font-black transition-all ${!isSurveyed ? 'bg-white text-red-500 shadow-sm' : 'text-slate-400'}`}
+                  >NÃO</button>
+                </div>
+             </div>
           </div>
           {isDivergent && <span className="text-[9px] sm:text-[10px] bg-red-600 text-white px-2.5 py-1 rounded-lg font-black uppercase tracking-widest self-start sm:self-auto">Divergência</span>}
         </div>
-        <div className="flex gap-2 sm:gap-3">
-          {Object.values(ItemStatus).map(s => (
-            <button 
-              key={s}
-              onClick={() => handleStatusChange(item.id, s)}
-              className={`flex-1 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black rounded-xl sm:rounded-2xl border-2 transition-all active:scale-95 ${response?.status === s ? (s === ItemStatus.OK ? 'bg-[#58CC02] border-[#58CC02] text-white shadow-lg' : (s === ItemStatus.DEFECTIVE ? 'bg-red-600 border-red-600 text-white shadow-lg' : 'bg-orange-500 border-orange-500 text-white shadow-lg')) : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'}`}
-            >{s}</button>
-          ))}
-        </div>
-        {response?.status && response.status !== ItemStatus.OK && (
-          <input 
-            value={response.observations || ''}
-            placeholder="Relate o motivo aqui..." 
-            className="w-full mt-3 p-4 bg-slate-50 border-2 border-slate-100 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-slate-700 outline-none focus:border-slate-300 transition-all"
-            onChange={e => setItemResponses(prev => ({...prev, [item.id]: {...(prev[item.id] as any), observations: e.target.value}}))}
-          />
+
+        {isSurveyed && (
+          <div className="space-y-3 animate-in fade-in duration-300">
+            <div className="flex gap-2 sm:gap-3">
+              {Object.values(ItemStatus).map(s => (
+                <button 
+                  key={s}
+                  onClick={() => handleStatusChange(item.id, s)}
+                  className={`flex-1 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black rounded-xl sm:rounded-2xl border-2 transition-all active:scale-95 ${response?.status === s ? (s === ItemStatus.OK ? 'bg-[#58CC02] border-[#58CC02] text-white shadow-lg' : (s === ItemStatus.DEFECTIVE ? 'bg-red-600 border-red-600 text-white shadow-lg' : 'bg-orange-500 border-orange-500 text-white shadow-lg')) : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'}`}
+                >{s}</button>
+              ))}
+            </div>
+            {response?.status && response.status !== ItemStatus.OK && (
+              <input 
+                value={response.observations || ''}
+                placeholder="Relate o motivo aqui..." 
+                className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-slate-700 outline-none focus:border-slate-300 transition-all"
+                onChange={e => setItemResponses(prev => ({...prev, [item.id]: {...(prev[item.id] as any), observations: e.target.value}}))}
+              />
+            )}
+          </div>
         )}
       </div>
     );
@@ -403,22 +441,44 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
           <div className="space-y-8 sm:space-y-10 animate-in fade-in zoom-in-95">
              <div className="space-y-4 sm:space-y-5">
                 <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">Resumo da Inspeção</h4>
-                {issuesSummary.length > 0 ? (
-                  <div className="bg-red-50/50 rounded-[1.8rem] sm:rounded-[2.5rem] p-6 sm:p-8 border border-red-100 space-y-3 sm:space-y-4">
-                    {issuesSummary.map(issue => (
-                      <div key={issue.id} className="flex items-center justify-between border-b border-red-100/50 last:border-0 pb-2 sm:pb-3 last:pb-0 gap-3">
-                        <span className="text-xs sm:text-sm font-black text-slate-700 leading-tight">{issue.label}</span>
-                        <span className={`text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-white shadow-sm shrink-0 ${issue.status === ItemStatus.DEFECTIVE ? 'bg-red-600' : 'bg-orange-500'}`}>{issue.status}</span>
-                      </div>
-                    ))}
+                
+                {/* Itens com Falhas */}
+                {issuesSummary.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2">Problemas Detectados</p>
+                    <div className="bg-red-50/50 rounded-[1.8rem] sm:rounded-[2.5rem] p-6 sm:p-8 border border-red-100 space-y-3">
+                      {issuesSummary.map(issue => (
+                        <div key={issue.id} className="flex items-center justify-between border-b border-red-100/50 last:border-0 pb-2 sm:pb-3 last:pb-0 gap-3">
+                          <span className="text-xs sm:text-sm font-black text-slate-700 leading-tight">{issue.label}</span>
+                          <span className={`text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-white shadow-sm shrink-0 ${issue.status === ItemStatus.DEFECTIVE ? 'bg-red-600' : 'bg-orange-500'}`}>{issue.status}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ) : (
+                )}
+
+                {/* Itens Não Vistoriados */}
+                {nonSurveyedSummary.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Itens não Vistoriados</p>
+                    <div className="bg-slate-50 rounded-[1.8rem] sm:rounded-[2.5rem] p-6 sm:p-8 border border-slate-200 space-y-3">
+                      {nonSurveyedSummary.map((label, idx) => (
+                        <div key={idx} className="flex items-center justify-between border-b border-slate-100 last:border-0 pb-2 last:pb-0 gap-3">
+                          <span className="text-xs sm:text-sm font-bold text-slate-400 italic">{label}</span>
+                          <span className="text-[8px] font-black px-2 py-1 bg-slate-200 text-slate-500 rounded-lg uppercase">N/V</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {issuesSummary.length === 0 && nonSurveyedSummary.length === 0 && (
                   <div className="bg-[#58CC02]/10 rounded-[1.8rem] sm:rounded-[2.5rem] p-8 sm:p-10 border border-[#58CC02]/20 text-center">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#58CC02] text-white rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-xl shadow-green-100">
                         <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>
                     </div>
                     <p className="text-xs sm:text-sm font-black text-[#58CC02] uppercase tracking-widest">Aprovado sem Falhas</p>
-                    <p className="text-[10px] text-green-600 font-bold mt-1">Todos os itens em conformidade.</p>
+                    <p className="text-[10px] text-green-600 font-bold mt-1">Inspeção concluída com sucesso.</p>
                   </div>
                 )}
              </div>
@@ -427,7 +487,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
                 <div className={`p-6 sm:p-10 rounded-[1.8rem] sm:rounded-[3rem] border-4 transition-all ${isSigned ? 'bg-[#0A2540] border-[#0A2540] text-white shadow-2xl' : 'bg-slate-50 border-dashed border-slate-200 text-slate-400'}`}>
                   {isSigned ? (
                     <div>
-                       <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-2 sm:mb-3">Vistoria Assinada por</p>
+                       <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-2 sm:mb-3">Checklist Assinado por</p>
                        <p className="text-2xl sm:text-3xl font-black">{user.name}</p>
                        <button onClick={() => setIsSigned(false)} className="mt-4 sm:mt-6 text-[10px] font-black uppercase tracking-widest border border-white/20 px-5 sm:px-6 py-1.5 sm:py-2 rounded-full hover:bg-white/10 transition-colors">Refazer</button>
                     </div>
@@ -444,7 +504,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
                 className="w-full p-4 sm:p-6 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[2.5rem] h-28 sm:h-32 font-bold outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-xs sm:text-sm"
                 value={generalObs}
                 onChange={e => setGeneralObs(e.target.value)}
-                placeholder="Observações adicionais..."
+                placeholder="Observações adicionais da operação..."
              />
           </div>
         )}

@@ -306,6 +306,7 @@ const App: React.FC = () => {
             submissions={entries} 
             user={user}
             users={users}
+            availableItems={checklistItems}
             onBack={() => setView('dashboard')} 
             onRefresh={fetchEntries}
           />

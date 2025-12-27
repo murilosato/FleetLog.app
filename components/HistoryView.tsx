@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { ChecklistEntry, ItemStatus, User } from '../types';
+import { ChecklistEntry, ItemStatus, User, DBChecklistItem } from '../types';
 import { OFFICIAL_SOLURB_ITEMS } from '../constants';
 import { supabase } from '../lib/supabase';
 
@@ -8,11 +8,19 @@ interface HistoryViewProps {
   submissions: ChecklistEntry[];
   user: User;
   users?: User[];
+  availableItems?: DBChecklistItem[];
   onBack: () => void;
   onRefresh?: () => void;
 }
 
-const HistoryView: React.FC<HistoryViewProps> = ({ submissions, user, users = [], onBack, onRefresh }) => {
+const HistoryView: React.FC<HistoryViewProps> = ({ 
+  submissions, 
+  user, 
+  users = [], 
+  availableItems = [], 
+  onBack, 
+  onRefresh 
+}) => {
   const [selected, setSelected] = useState<ChecklistEntry | null>(null);
   const [dateFilter, setDateFilter] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -30,8 +38,86 @@ const HistoryView: React.FC<HistoryViewProps> = ({ submissions, user, users = []
   const formatTime = (ts: number) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   const getItemLabel = (id: string) => {
-    const item = OFFICIAL_SOLURB_ITEMS.find(i => i.id.toString() === id);
-    return item ? item.label : `Item ${id}`;
+    const numericId = parseInt(id);
+    const dbItem = availableItems.find(i => i.id === numericId);
+    if (dbItem) {
+      const clean = dbItem.label.replace(/^\d+\.\s*/, '');
+      return `${dbItem.id}. ${clean}`;
+    }
+    const item = OFFICIAL_SOLURB_ITEMS.find(i => i.id === numericId);
+    if (item) {
+      const clean = item.label.replace(/^\d+\.\s*/, '');
+      return `${item.id}. ${clean}`;
+    }
+    return `Item ${id}`;
+  };
+
+  const exportToCSV = () => {
+    if (filteredSubmissions.length === 0) return;
+
+    // A fonte de verdade para as colunas do CSV deve ser os itens que existem no banco
+    const itemsToExport = availableItems.length > 0 ? availableItems : OFFICIAL_SOLURB_ITEMS;
+    
+    // Cabeçalhos Base
+    const baseHeaders = ['Data', 'Prefixo', 'Tipo', 'Turno', 'Motorista', 'KM', 'Horimetro', 'Observações Gerais'];
+    
+    // Itens dinâmicos
+    const itemHeaders: string[] = [];
+    itemsToExport.sort((a,b) => a.id - b.id).forEach(item => {
+      const cleanLabel = item.label.replace(/^\d+\.\s*/, '');
+      const shortLabel = `Item ${item.id} - ${cleanLabel}`;
+      itemHeaders.push(`${shortLabel} (Status)`);
+      itemHeaders.push(`${shortLabel} (Vistoriado)`);
+      itemHeaders.push(`${shortLabel} (Obs)`);
+    });
+
+    const headers = [...baseHeaders, ...itemHeaders];
+
+    const rows = filteredSubmissions.map(s => {
+      const baseData = [
+        s.date,
+        s.prefix,
+        s.type,
+        s.shift,
+        s.driver_name,
+        s.km,
+        s.horimetro,
+        (s.general_observations || '').replace(/(\r\n|\n|\r|")/gm, " ")
+      ];
+
+      const itemData: any[] = [];
+      itemsToExport.sort((a,b) => a.id - b.id).forEach(officialItem => {
+        const itemId = officialItem.id.toString();
+        const submissionItem = s.items[itemId];
+        
+        if (submissionItem) {
+          itemData.push(submissionItem.status || 'OK');
+          itemData.push(submissionItem.surveyed ? 'Sim' : 'Não');
+          itemData.push((submissionItem.observations || '').replace(/(\r\n|\n|\r|")/gm, " "));
+        } else {
+          itemData.push('N/A');
+          itemData.push('N/A');
+          itemData.push('');
+        }
+      });
+
+      return [...baseData, ...itemData];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `ecoSCheck_Completo_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getSignatureDisplay = (entry: ChecklistEntry, field: 'maintenance' | 'operation') => {
@@ -97,6 +183,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({ submissions, user, users = []
     }
   };
 
+  const canExport = user.role === 'ADMIN' || user.role === 'OPERACAO' || user.role === 'MANUTENCAO';
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500 pb-20 sm:pb-0">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8 mb-6 sm:mb-10">
@@ -106,9 +194,21 @@ const HistoryView: React.FC<HistoryViewProps> = ({ submissions, user, users = []
           </button>
           <h2 className="text-3xl sm:text-4xl font-black text-[#0A2540] tracking-tight">Histórico</h2>
         </div>
-        <div className="bg-white p-2 rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-4 pl-4 sm:pl-5">
-           <span className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest shrink-0">Filtrar Data:</span>
-           <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="p-2 sm:p-3 bg-slate-50 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm text-[#0A2540] border-0 outline-none w-full sm:w-auto" />
+        <div className="flex flex-wrap items-center gap-3">
+           <div className="bg-white p-2 rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-4 pl-4 sm:pl-5">
+              <span className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest shrink-0">Filtrar:</span>
+              <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="p-2 sm:p-3 bg-slate-50 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm text-[#0A2540] border-0 outline-none w-full sm:w-auto" />
+           </div>
+           
+           {canExport && (
+             <button 
+              onClick={exportToCSV}
+              className="p-3 sm:p-4 bg-[#58CC02] text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest shadow-lg shadow-green-100 flex items-center gap-2 active:scale-95 transition-all"
+             >
+               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+               EXPORTAR TUDO (CSV)
+             </button>
+           )}
         </div>
       </div>
 
@@ -149,7 +249,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ submissions, user, users = []
                 <div className="space-y-6 sm:space-y-8">
                   <div className="bg-[#1E90FF]/5 p-5 sm:p-8 rounded-[2rem] sm:rounded-[3rem] border-2 border-[#1E90FF]/10">
                     <div className="space-y-4 max-h-[400px] sm:max-h-[450px] overflow-y-auto pr-2 sm:pr-3 hide-scrollbar">
-                      {Object.entries(editItems).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([id, data]: [string, any]) => (
+                      {Object.entries(selected.items).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([id, data]: [string, any]) => (
                         <div key={id} className="flex flex-col gap-3 p-4 bg-white rounded-2xl sm:rounded-3xl border border-blue-50">
                           <span className="text-[11px] sm:text-xs font-black text-slate-700 leading-tight">{getItemLabel(id)}</span>
                           <div className="flex gap-2">
@@ -157,7 +257,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ submissions, user, users = []
                               <button 
                                 key={s}
                                 onClick={() => setEditItems(prev => ({ ...prev, [id]: { ...prev[id], status: s } }))}
-                                className={`flex-1 py-3 sm:py-3.5 text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl border-2 transition-all active:scale-95 ${editItems[id].status === s ? 'bg-[#1E90FF] text-white border-[#1E90FF] shadow-lg shadow-blue-100' : 'bg-slate-50 text-slate-400 border-transparent'}`}
+                                className={`flex-1 py-3 sm:py-3.5 text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl border-2 transition-all active:scale-95 ${editItems[id]?.status === s ? 'bg-[#1E90FF] text-white border-[#1E90FF] shadow-lg shadow-blue-100' : 'bg-slate-50 text-slate-400 border-transparent'}`}
                               >{s}</button>
                             ))}
                           </div>
@@ -189,9 +289,14 @@ const HistoryView: React.FC<HistoryViewProps> = ({ submissions, user, users = []
                      </h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
                        {Object.entries(selected.items).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([id, data]: [string, any]) => (
-                          <div key={id} className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 ${data.status === ItemStatus.OK ? 'bg-white border-slate-50' : 'bg-red-50 border-red-50 text-red-700'}`}>
-                             <span className="text-[11px] sm:text-xs font-black truncate pr-3 text-slate-600 leading-tight">{getItemLabel(id)}</span>
-                             <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl uppercase shrink-0 shadow-sm ${data.status === ItemStatus.OK ? 'bg-[#58CC02] text-white' : 'bg-red-600 text-white'}`}>{getStatusDisplay(data.status)}</span>
+                          <div key={id} className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 ${data.status === ItemStatus.OK ? 'bg-white border-slate-50' : (data.surveyed ? 'bg-red-50 border-red-50 text-red-700' : 'bg-slate-50 border-slate-100 opacity-60')}`}>
+                             <div className="flex flex-col flex-1 truncate pr-3">
+                                <span className={`text-[11px] sm:text-xs font-black truncate leading-tight ${data.surveyed ? 'text-slate-600' : 'text-slate-400 italic'}`}>{getItemLabel(id)}</span>
+                                {!data.surveyed && <span className="text-[7px] uppercase font-bold text-slate-400">Não Vistoriado</span>}
+                             </div>
+                             {data.surveyed && (
+                                <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl uppercase shrink-0 shadow-sm ${data.status === ItemStatus.OK ? 'bg-[#58CC02] text-white' : 'bg-red-600 text-white'}`}>{getStatusDisplay(data.status)}</span>
+                             )}
                           </div>
                        ))}
                      </div>

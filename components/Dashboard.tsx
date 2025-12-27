@@ -100,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
         <div onClick={onNewChecklist} className="bg-[#1E90FF] p-8 sm:p-10 rounded-[2.5rem] sm:rounded-[3.5rem] text-white shadow-2xl shadow-blue-100 cursor-pointer hover:bg-[#0A2540] transition-all flex items-center justify-between group active:scale-[0.98]">
           <div className="relative z-10">
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight uppercase">Nova Vistoria</h2>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight uppercase">Novo Checklist</h2>
             <p className="opacity-80 font-bold mt-1 sm:mt-2 text-xs sm:text-sm">Clique para iniciar agora</p>
           </div>
           <div className="bg-white/20 p-4 sm:p-6 rounded-xl sm:rounded-[2rem] group-hover:scale-110 transition-transform shadow-lg backdrop-blur-md">
