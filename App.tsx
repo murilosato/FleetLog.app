@@ -195,6 +195,7 @@ const App: React.FC = () => {
             user={user}
             users={users}
             onBack={() => setView('dashboard')} 
+            onRefresh={fetchEntries}
           />
         )}
         {view === 'admin' && (

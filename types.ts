@@ -37,6 +37,7 @@ export interface DBChecklistItem {
   id: number;
   label: string;
   category: string;
+  active?: boolean;
 }
 
 export interface ChecklistEntry {
