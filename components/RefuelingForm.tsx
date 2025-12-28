@@ -21,6 +21,10 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
   const [showArla, setShowArla] = useState(false);
   const [loading, setLoading] = useState(false);
   const [globalLimits, setGlobalLimits] = useState({ km: 500, hor: 24 });
+  
+  // Custom Alert State
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
 
   useEffect(() => {
     supabase.from('fuel_types').select('*').eq('active', true).then(({ data }) => {
@@ -38,6 +42,11 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
     });
   }, []);
 
+  const triggerAlert = (title: string, message: string) => {
+    setAlertConfig({ title, message });
+    setShowAlert(true);
+  };
+
   const validateValues = () => {
     if (!selectedVehicle) return false;
 
@@ -45,20 +54,34 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
     const maxHor = selectedVehicle.max_horimetro_jump || globalLimits.hor;
 
     if (km < selectedVehicle.current_km) {
-      alert(`KM inválido. O valor atual é ${selectedVehicle.current_km}.`);
+      triggerAlert(
+        "KM Inválido",
+        `O KM informado (${km}) é inferior ao KM atual registrado no sistema (${selectedVehicle.current_km}). Por favor, verifique o odômetro do veículo.`
+      );
       return false;
     }
+    
     if (km > selectedVehicle.current_km + maxKm) {
-      alert(`KM excede o limite permitido (${maxKm}km). Verifique o valor.`);
+      triggerAlert(
+        "Alerta de Pulo de KM",
+        `O KM informado excede o limite de pulo permitido (${maxKm}km). Verifique se digitou corretamente.`
+      );
       return false;
     }
 
     if (hor < selectedVehicle.current_horimetro) {
-      alert(`Horímetro inválido. O valor atual é ${selectedVehicle.current_horimetro}.`);
+      triggerAlert(
+        "Horímetro Inválido",
+        `O Horímetro informado (${hor}) é inferior ao atual no sistema (${selectedVehicle.current_horimetro}).`
+      );
       return false;
     }
+    
     if (hor > selectedVehicle.current_horimetro + maxHor) {
-      alert(`Horímetro excede o limite permitido (${maxHor}h). Verifique o valor.`);
+      triggerAlert(
+        "Alerta de Horímetro",
+        `O Horímetro informado excede o limite de pulo permitido (${maxHor}h).`
+      );
       return false;
     }
 
@@ -90,14 +113,36 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
       await supabase.from('vehicles').update({ current_km: Number(km), current_horimetro: Number(hor) }).eq('id', selectedVehicle.id);
       onSubmit(entry);
     } catch (err: any) {
-      alert("Erro ao registrar: " + err.message);
+      triggerAlert("Erro ao Salvar", err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto p-6 sm:p-10 bg-white rounded-[3rem] shadow-sm border border-slate-100 animate-in slide-in-from-bottom-6">
+    <div className="max-w-xl mx-auto p-6 sm:p-10 bg-white rounded-[3rem] shadow-sm border border-slate-100 animate-in slide-in-from-bottom-6 relative">
+      
+      {/* Centered Validation Alert */}
+      {showAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#0A2540]/60 backdrop-blur-md">
+          <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-2xl max-w-sm w-full text-center space-y-6 animate-in zoom-in-95 duration-200">
+             <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-4 border-red-100 shadow-xl">
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+             </div>
+             <div className="space-y-2">
+                <h3 className="text-xl font-black text-[#0A2540] uppercase tracking-tight">{alertConfig.title}</h3>
+                <p className="text-slate-500 font-bold leading-relaxed text-sm">{alertConfig.message}</p>
+             </div>
+             <button 
+              onClick={() => setShowAlert(false)}
+              className="w-full py-4 bg-[#0A2540] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all"
+             >
+               CORRIGIR VALORES
+             </button>
+          </div>
+        </div>
+      )}
+
       <h2 className="text-3xl font-black text-[#0A2540] mb-8 uppercase flex items-center gap-4">
         <div className="w-2 h-8 bg-[#58CC02] rounded-full"></div>
         Abastecimento
@@ -116,7 +161,21 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
             <option value="">Selecionar prefixo...</option>
             {vehicles.filter(v => v.active).map(v => <option key={v.id} value={v.id}>{v.prefix} - {v.plate}</option>)}
           </select>
+          
+          {selectedVehicle && (
+            <div className="grid grid-cols-2 gap-3 px-5 py-4 bg-[#58CC02]/5 rounded-[1.5rem] border border-[#58CC02]/20 mt-3 animate-in fade-in">
+              <div className="space-y-0.5">
+                <p className="text-[8px] font-black text-[#58CC02] uppercase tracking-widest opacity-60">KM Sistema</p>
+                <p className="text-sm font-black text-[#0A2540]">{selectedVehicle.current_km}</p>
+              </div>
+              <div className="space-y-0.5 border-l border-[#58CC02]/20 pl-4">
+                <p className="text-[8px] font-black text-[#58CC02] uppercase tracking-widest opacity-60">HOR Sistema</p>
+                <p className="text-sm font-black text-[#0A2540]">{selectedVehicle.current_horimetro}</p>
+              </div>
+            </div>
+          )}
         </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">KM Atual</label>
@@ -151,7 +210,7 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
         )}
         <div className="flex gap-4 pt-4">
           <button type="button" onClick={onCancel} className="flex-1 py-5 text-slate-400 font-black text-[10px] uppercase tracking-widest">Cancelar</button>
-          <button disabled={loading} className="flex-1 py-5 bg-[#58CC02] text-white rounded-[1.8rem] font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50">
+          <button disabled={loading} className="flex-1 py-5 bg-[#58CC02] text-white rounded-[1.8rem] font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 shadow-xl shadow-green-100">
             {loading ? 'Salvando...' : 'Finalizar'}
           </button>
         </div>
