@@ -24,7 +24,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleInstall = async () => {
     if (!installPrompt) {
-      alert("Para baixar o FleetLog, use a opção 'Adicionar à tela de início' no menu do seu navegador.");
+      alert("Para baixar o FleetLog, use a opção 'Adicionar à tela de início' ou 'Instalar Aplicativo' no menu do seu navegador.");
       return;
     }
     installPrompt.prompt();
@@ -151,10 +151,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="mt-12 flex flex-col items-center gap-6">
             <button 
               onClick={handleInstall}
-              className="text-[10px] font-black text-cyan-400 hover:text-white uppercase tracking-[0.2em] transition-all flex items-center gap-3 bg-cyan-500/5 px-6 py-4 rounded-2xl border border-cyan-500/20 hover:bg-cyan-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+              className="w-full group relative flex items-center justify-center gap-4 bg-slate-950 border border-cyan-500/30 hover:border-cyan-400 px-6 py-4 rounded-2xl transition-all hover:shadow-[0_0_20px_rgba(0,242,255,0.15)] overflow-hidden"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              INSTALAR FLEETLOG APP
+              <div className="absolute inset-0 bg-cyan-400/5 group-hover:bg-cyan-400/10 transition-colors"></div>
+              <div className="relative flex items-center gap-3">
+                <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 15V3M12 15L8 11M12 15L16 11M2 17V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <span className="text-[11px] font-tech font-black text-white tracking-[0.15em] uppercase">BAIXAR APP FLEETLOG</span>
+              </div>
             </button>
             <div className="flex items-center gap-4 w-full">
               <div className="h-px flex-1 bg-slate-800"></div>

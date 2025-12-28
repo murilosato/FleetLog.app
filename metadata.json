@@ -1,6 +1,6 @@
 {
-  "name": "Solurb CheckList - Gestão de Resíduos",
-  "description": "Sistema digital de checklist para inspeção de veículos de coleta de resíduos, substituindo formulários de papel por uma interface moderna e segura.",
+  "name": "FleetLog - Inteligência em Movimento",
+  "description": "Gestão e registros operacionais de frota, incluindo checklist, abastecimentos e manutenção com inteligência operacional.",
   "requestFramePermissions": [
     "camera"
   ]
