@@ -131,35 +131,35 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-[#0A2540] text-white shadow-lg sticky top-0 z-50">
+      <header className="bg-[#020617] text-white shadow-lg sticky top-0 z-50 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => setView('dashboard')}>
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center font-black text-[#0A2540] text-base sm:text-lg overflow-hidden shadow-inner">
-                eS
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center font-tech font-black text-cyan-400 text-base sm:text-lg overflow-hidden">
+                FL
             </div>
             <div className="hidden xs:flex flex-col">
-              <h1 className="font-black text-base sm:text-xl tracking-tight leading-none">ecoSCheck</h1>
+              <h1 className="font-tech font-black text-base sm:text-xl tracking-wider leading-none">FLEET<span className="text-cyan-400">LOG</span></h1>
             </div>
           </div>
           
           <nav className="flex items-center gap-1 sm:gap-2 mx-4 overflow-x-auto hide-scrollbar">
-            <button onClick={() => setView('dashboard')} className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all whitespace-nowrap ${view === 'dashboard' ? 'bg-[#1E90FF] text-white' : 'opacity-60 hover:opacity-100'}`}>Início</button>
-            <button onClick={() => setView('history_portal')} className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${view.includes('history') ? 'bg-[#1E90FF] text-white' : 'opacity-60 hover:opacity-100'}`}>Históricos</button>
+            <button onClick={() => setView('dashboard')} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all whitespace-nowrap ${view === 'dashboard' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Painel</button>
+            <button onClick={() => setView('history_portal')} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view.includes('history') ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Log</button>
             {showReports && (
-              <button onClick={() => setView('reports')} className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'reports' ? 'bg-[#1E90FF] text-white' : 'opacity-60 hover:opacity-100'}`}>Relatórios</button>
+              <button onClick={() => setView('reports')} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view === 'reports' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Analytics</button>
             )}
             {user.role === 'ADMIN' && (
-              <button onClick={() => setView('admin')} className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'admin' ? 'bg-[#1E90FF] text-white' : 'opacity-60 hover:opacity-100'}`}>Gestão</button>
+              <button onClick={() => setView('admin')} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view === 'admin' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Gestão</button>
             )}
           </nav>
 
           <div className="flex items-center gap-3">
             <div className="hidden md:flex flex-col items-end mr-1 text-right">
                <span className="text-[11px] font-black uppercase tracking-tight">{user.name}</span>
-               <span className="text-[8px] font-black bg-[#1E90FF] text-white px-2 py-0.5 rounded-full uppercase tracking-widest">{getRoleLabel(user.role)}</span>
+               <span className="text-[8px] font-black bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full uppercase tracking-widest">{getRoleLabel(user.role)}</span>
             </div>
-            <button onClick={handleLogout} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            <button onClick={handleLogout} className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl transition-colors">
+              <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
           </div>
         </div>

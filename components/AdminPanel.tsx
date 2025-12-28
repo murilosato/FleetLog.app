@@ -199,13 +199,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
     
     setProcessingId(id);
     try {
+      // Garantir que ID seja do tipo correto para o Supabase (uuid vs integer)
+      const formattedId = table === 'vehicles' ? id : Number(id);
+      
       const { error } = await supabase
         .from(table)
         .update({ active: nextState })
-        .eq('id', id);
+        .eq('id', formattedId);
         
       if (error) throw error;
       
+      // Sincronizar estados locais e globais
       if (table === 'fuel_types' || table === 'lubricant_types') {
         await fetchData();
       } else {
@@ -222,7 +226,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
   const categories = Array.from(new Set(items.map(i => i.category)));
 
   const LoadingSpinner = () => (
-    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
@@ -261,7 +265,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
       {tab === 'vehicles' && (
         <div className="space-y-10">
-          {/* Cadastro Veículo */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-[3rem] border shadow-sm border-slate-100 lg:col-span-1">
               <h3 className="font-black text-[#0A2540] text-lg mb-6 uppercase flex items-center gap-3">
@@ -311,11 +314,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
             </div>
           </div>
 
-          {/* Listagem Veículos */}
           <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
              <div className="flex items-center gap-4 mb-8 bg-slate-50 p-4 rounded-2xl">
                 <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Pesquisar por prefixo ou placa..." className="bg-transparent border-0 outline-none font-black text-sm w-full text-[#0A2540]" />
+                <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Pesquisar..." className="bg-transparent border-0 outline-none font-black text-sm w-full text-[#0A2540]" />
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {vehicles.filter(v => (showInactive || v.active !== false) && (v.prefix.toLowerCase().includes(searchTerm.toLowerCase()) || v.plate.toLowerCase().includes(searchTerm.toLowerCase()))).map(v => {
@@ -323,27 +325,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                   const isProcessing = processingId != null && String(processingId) === String(v.id);
 
                   return (
-                    <div key={v.id} className={`p-6 rounded-[2.5rem] border-2 shadow-sm flex flex-col transition-all duration-300 ${!isActive ? 'bg-slate-50/50 border-slate-200 opacity-40 grayscale' : 'bg-slate-50/50 border-white shadow-sm'}`}>
+                    <div key={v.id} className={`p-6 rounded-[2.5rem] border-2 shadow-sm flex flex-col transition-all duration-300 ${!isActive ? 'bg-slate-100 border-slate-200 opacity-40 grayscale' : 'bg-slate-50/50 border-white shadow-sm'}`}>
                       <div className="flex justify-between items-start mb-6">
                           <div>
                             <span className={`text-2xl font-black ${!isActive ? 'text-slate-400' : 'text-[#0A2540]'}`}>{v.prefix}</span>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{v.plate}</p>
-                            {!isActive && <span className="text-[8px] font-black bg-slate-200 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-widest mt-1 inline-block">Inativo</span>}
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => { setEditingId(v.id); setEditData(v); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 bg-white rounded-xl text-blue-500 hover:bg-blue-50 transition-all shadow-md active:scale-90">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            <button onClick={() => { setEditingId(v.id); setEditData(v); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 bg-white rounded-xl text-blue-500 hover:bg-blue-50 transition-all shadow-md active:scale-90">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                             </button>
                             <button 
                               disabled={isProcessing}
                               onClick={(e) => handleToggleStatus(e, 'vehicles', v.id, isActive)} 
-                              className={`p-2.5 bg-white rounded-xl transition-all shadow-md active:scale-90 flex items-center justify-center min-w-[40px] min-h-[40px] ${!isActive ? 'text-green-500 hover:bg-green-50' : 'text-red-500 hover:bg-red-50'}`}
+                              className={`p-2 bg-white rounded-xl transition-all shadow-md active:scale-90 flex items-center justify-center min-w-[36px] min-h-[36px] ${!isActive ? 'text-green-500 hover:bg-green-50' : 'text-red-500 hover:bg-red-50'}`}
                             >
                                 {isProcessing ? <LoadingSpinner /> : (
                                   !isActive ? (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
                                   ) : (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                                   )
                                 )}
                             </button>
@@ -351,11 +352,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                       </div>
                       <div className="mt-auto grid grid-cols-2 gap-3">
                           <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
-                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-0.5">KM Atual</p>
+                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-0.5">KM</p>
                             <p className="text-sm font-black text-[#0A2540]">{v.current_km}</p>
                           </div>
                           <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
-                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-0.5">HOR Atual</p>
+                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-0.5">HOR</p>
                             <p className="text-sm font-black text-[#0A2540]">{v.current_horimetro}</p>
                           </div>
                       </div>
@@ -369,7 +370,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
       {tab === 'items' && (
         <div className="space-y-10 animate-in fade-in">
-           {/* Cadastro Item Checklist */}
            <div className="bg-white p-10 rounded-[3.5rem] border shadow-sm border-slate-100">
              <h3 className="font-black text-[#0A2540] text-xl mb-8 uppercase flex items-center gap-4">
                <div className="w-2 h-8 bg-[#1E90FF] rounded-full"></div>
@@ -395,12 +395,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                 )}
                 <div className="lg:col-span-4 flex gap-3 pt-4">
                    {editingId && <button type="button" onClick={() => setEditingId(null)} className="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase">Cancelar</button>}
-                   <button type="submit" className="flex-1 py-4 bg-[#0A2540] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">{editingId ? 'Salvar Edição' : 'Cadastrar Item'}</button>
+                   <button type="submit" className="flex-1 py-4 bg-[#0A2540] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">{editingId ? 'Salvar' : 'Cadastrar'}</button>
                 </div>
              </form>
            </div>
 
-           {/* Listagem Itens Checklist */}
            <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {items.filter(i => showInactive || i.active !== false).map(item => {
@@ -415,7 +414,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                       </div>
                       <div className="flex gap-2 shrink-0">
                           <button onClick={() => { setEditingId(item.id); setEditData(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 bg-slate-50 rounded-xl text-blue-500 hover:bg-blue-100 transition-all shadow-sm active:scale-90">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                           </button>
                           <button 
                             disabled={isProcessing}
@@ -424,9 +423,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                           >
                             {isProcessing ? <LoadingSpinner /> : (
                               !isActive ? (
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
                               ) : (
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                               )
                             )}
                           </button>
@@ -441,7 +440,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
       {(tab === 'fuels' || tab === 'lubricants') && (
         <div className="space-y-10 animate-in fade-in">
-           {/* Cadastro Combustível/Lubrificante */}
            <div className="bg-white p-10 rounded-[3.5rem] border shadow-sm border-slate-100">
              <h3 className="font-black text-[#0A2540] text-xl mb-8 uppercase flex items-center gap-4">
                <div className={`w-2 h-8 rounded-full ${tab === 'fuels' ? 'bg-[#58CC02]' : 'bg-[#FFA500]'}`}></div>
@@ -459,7 +457,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
              </form>
            </div>
            
-           {/* Listagem Insumos */}
            <div className="bg-white p-10 rounded-[3.5rem] border shadow-sm border-slate-100">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  {(tab === 'fuels' ? fuelTypes : lubricantTypes).filter(f => showInactive || f.active !== false).map(f => {
@@ -472,7 +469,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                         <span className={`text-[10px] font-black uppercase ${!isActive ? 'text-slate-400' : 'text-[#0A2540]'}`}>{f.name}</span>
                         <div className="flex gap-3 shrink-0">
                           <button onClick={() => { setEditingId(f.id); setEditData(f); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-blue-500 hover:text-blue-700 active:scale-90 p-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                           </button>
                           <button 
                             disabled={isProcessing}
@@ -481,9 +478,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                           >
                             {isProcessing ? <LoadingSpinner /> : (
                               !isActive ? (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
                               ) : (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                               )
                             )}
                           </button>

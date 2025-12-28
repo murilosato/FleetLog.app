@@ -24,7 +24,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleInstall = async () => {
     if (!installPrompt) {
-      alert("Para baixar, use a opção 'Adicionar à tela de início' no menu do seu navegador.");
+      alert("Para baixar o FleetLog, use a opção 'Adicionar à tela de início' no menu do seu navegador.");
       return;
     }
     installPrompt.prompt();
@@ -37,7 +37,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const cleanCredential = credential.trim();
     
     if (!cleanCredential) {
-      setError('Por favor, informe o usuário ou matrícula.');
+      setError('Acesso negado: informe credenciais.');
       return;
     }
 
@@ -54,76 +54,119 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (dbError) throw new Error(dbError.message);
 
       if (!data) {
-        setError('Acesso negado. Credenciais não encontradas.');
+        setError('Usuário não identificado na central.');
       } else {
         onLogin(data as User);
       }
     } catch (err: any) {
-      console.error('Erro crítico no login:', err);
-      setError(`Erro de conexão: ${err.message || 'Verifique sua internet.'}`);
+      setError(`Erro de rede: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0A2540] flex items-center justify-center p-4 sm:p-6">
-      <div className="bg-white rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl p-8 sm:p-10 max-w-md w-full relative overflow-hidden">
-        {/* Adorno Decorativo */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#1E90FF]/10 rounded-full -mr-16 -mt-16"></div>
-        
-        <div className="flex flex-col items-center mb-8 sm:mb-10 relative z-10">
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-[#1E90FF] rounded-2xl sm:rounded-3xl flex items-center justify-center mb-4 sm:mb-6 text-white font-black text-4xl sm:text-5xl shadow-xl transform -rotate-6">
-             <div className="absolute inset-2 border-2 border-white/20 rounded-xl"></div>
-             eS
-             <div className="absolute -bottom-2 -right-2 bg-[#58CC02] w-8 h-8 sm:w-10 sm:h-10 rounded-full border-4 border-white flex items-center justify-center shadow-lg">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>
-             </div>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-[#0A2540] tracking-tight">ecoSCheck</h1>
-          <p className="text-slate-400 font-bold text-center mt-2 leading-tight text-sm sm:text-base">CheckList Digital para sua Frota</p>
-        </div>
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background futurista */}
+      <div className="absolute inset-0 grid-bg opacity-40"></div>
+      <div className="animate-scan"></div>
+      
+      {/* Luzes de fundo decorativas */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px]"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-lime-500/5 rounded-full blur-[120px]"></div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-          <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-1">Acesso do Operador</label>
-            <input 
-              type="text" 
-              value={credential}
-              onChange={(e) => setCredential(e.target.value)}
-              className="w-full px-5 sm:px-6 py-4 sm:py-5 rounded-2xl sm:rounded-[2rem] border-2 border-slate-50 bg-slate-50 focus:bg-white focus:border-[#1E90FF] focus:ring-0 outline-none transition-all text-base sm:text-lg font-bold text-slate-800 shadow-inner"
-              placeholder="Matrícula ou Usuário"
-              autoFocus
-              required
-            />
-          </div>
+      <div className="max-w-md w-full relative z-10">
+        <div className="bg-slate-900/40 backdrop-blur-2xl border border-slate-700/50 rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
           
-          {error && (
-            <div className="bg-red-50 text-red-600 p-4 sm:p-5 rounded-2xl sm:rounded-3xl text-[11px] sm:text-xs font-black border border-red-100 flex items-center gap-3 animate-in shake duration-300">
-               <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-               {error}
+          {/* Logo e Branding */}
+          <div className="flex flex-col items-center mb-10">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-lime-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+              <div className="relative w-20 h-20 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-700 text-cyan-400">
+                <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" className="animate-pulse" />
+                </svg>
+              </div>
             </div>
-          )}
+            <h1 className="mt-6 text-4xl font-tech font-black tracking-widest text-white">
+              FLEET<span className="text-cyan-400">LOG</span>
+            </h1>
+            <div className="h-0.5 w-12 bg-cyan-500/50 mt-1 rounded-full"></div>
+            <p className="mt-4 text-slate-400 font-medium tracking-[0.2em] text-[10px] uppercase text-center">
+              Inteligência Operacional de Frota
+            </p>
+          </div>
 
-          <button 
-            disabled={loading}
-            type="submit"
-            className="w-full bg-[#1E90FF] hover:bg-[#0A2540] text-white font-black py-5 sm:py-6 rounded-2xl sm:rounded-[2rem] shadow-2xl shadow-blue-200 disabled:opacity-50 transition-all active:scale-95 text-lg sm:text-xl uppercase tracking-widest"
-          >
-            {loading ? 'Validando...' : 'Entrar'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-2">
+                <label className="text-[10px] font-bold text-cyan-500/70 uppercase tracking-[0.3em]">Autenticação</label>
+                <div className="flex gap-1">
+                  <div className="w-1 h-1 bg-cyan-500 rounded-full animate-ping"></div>
+                  <div className="w-1 h-1 bg-cyan-500/40 rounded-full"></div>
+                </div>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-500">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
+                <input 
+                  type="text" 
+                  value={credential}
+                  onChange={(e) => setCredential(e.target.value)}
+                  className="w-full pl-14 pr-6 py-5 bg-slate-950/50 border border-slate-700 rounded-2xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 outline-none transition-all text-white font-semibold tracking-wider placeholder:text-slate-700"
+                  placeholder="ID DO OPERADOR"
+                  autoFocus
+                  required
+                />
+              </div>
+            </div>
 
-        <div className="mt-10 sm:mt-12 flex flex-col items-center gap-3">
-          <button 
-            onClick={handleInstall}
-            className="text-[9px] font-black text-[#1E90FF] hover:text-[#0A2540] uppercase tracking-widest flex items-center gap-2 opacity-60 hover:opacity-100 transition-all bg-blue-50/50 px-4 py-2 rounded-full border border-blue-100/50"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Baixar para uso offline
-          </button>
-          <p className="text-[10px] text-slate-300 font-black uppercase tracking-[0.3em]">Versão 3.1.2</p>
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl text-red-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-3 animate-in fade-in zoom-in-95">
+                <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                {error}
+              </div>
+            )}
+
+            <button 
+              disabled={loading}
+              type="submit"
+              className="w-full relative group overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-cyan-400 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+              <div className="relative bg-cyan-500 text-slate-950 font-tech font-black py-5 rounded-2xl shadow-[0_10px_30px_rgba(6,182,212,0.3)] group-active:scale-95 transition-all text-sm uppercase tracking-[0.3em] flex items-center justify-center gap-3">
+                {loading ? (
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                ) : (
+                  <>
+                    <span>INICIAR SESSÃO</span>
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                  </>
+                )}
+              </div>
+            </button>
+          </form>
+
+          <div className="mt-12 flex flex-col items-center gap-6">
+            <button 
+              onClick={handleInstall}
+              className="text-[10px] font-black text-cyan-400 hover:text-white uppercase tracking-[0.2em] transition-all flex items-center gap-3 bg-cyan-500/5 px-6 py-4 rounded-2xl border border-cyan-500/20 hover:bg-cyan-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              INSTALAR FLEETLOG APP
+            </button>
+            <div className="flex items-center gap-4 w-full">
+              <div className="h-px flex-1 bg-slate-800"></div>
+              <span className="text-[8px] text-slate-600 font-bold uppercase tracking-[0.4em]">v4.0.0 CORE</span>
+              <div className="h-px flex-1 bg-slate-800"></div>
+            </div>
+          </div>
         </div>
+        
+        <p className="mt-8 text-center text-slate-600 text-[10px] font-medium uppercase tracking-[0.1em] px-4">
+          "Aqui começam os dados da sua frota. Controle operacional inteligente em tempo real."
+        </p>
       </div>
     </div>
   );
