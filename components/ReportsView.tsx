@@ -13,6 +13,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
+  const [noDataMessage, setNoDataMessage] = useState<string | null>(null);
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -20,8 +21,14 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
     return `${day}/${month}/${year}`;
   };
 
+  const showNoDataAlert = () => {
+    setNoDataMessage("Nenhum registro encontrado para o período e tipo selecionado.");
+    setTimeout(() => setNoDataMessage(null), 5000);
+  };
+
   const exportChecklists = async () => {
     setLoading(true);
+    setNoDataMessage(null);
     try {
       const { data, error } = await supabase
         .from('entries')
@@ -32,7 +39,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
       if (error) throw error;
       if (!data || data.length === 0) {
-        alert("Nenhum dado encontrado no período selecionado.");
+        showNoDataAlert();
         return;
       }
 
@@ -85,6 +92,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
   const exportFuels = async () => {
     setLoading(true);
+    setNoDataMessage(null);
     try {
       const { data, error } = await supabase
         .from('refueling_history_view')
@@ -95,7 +103,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
       if (error) throw error;
       if (!data || data.length === 0) {
-        alert("Nenhum dado encontrado no período selecionado.");
+        showNoDataAlert();
         return;
       }
 
@@ -121,6 +129,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
   const exportLubricants = async () => {
     setLoading(true);
+    setNoDataMessage(null);
     try {
       const { data, error } = await supabase
         .from('lubricant_history_view')
@@ -131,7 +140,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
       if (error) throw error;
       if (!data || data.length === 0) {
-        alert("Nenhum dado encontrado no período selecionado.");
+        showNoDataAlert();
         return;
       }
 
@@ -190,7 +199,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">1. Selecione o Tipo de Dados</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button 
-              onClick={() => setReportType('checklists')}
+              onClick={() => { setReportType('checklists'); setNoDataMessage(null); }}
               className={`p-6 rounded-2xl border-2 transition-all text-left ${reportType === 'checklists' ? 'border-[#1E90FF] bg-blue-50/30 shadow-lg shadow-blue-50' : 'border-slate-50 bg-slate-50/50 hover:bg-white hover:border-slate-200'}`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${reportType === 'checklists' ? 'bg-[#1E90FF] text-white' : 'bg-slate-100 text-slate-400'}`}>
@@ -201,7 +210,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
             </button>
 
             <button 
-              onClick={() => setReportType('fuels')}
+              onClick={() => { setReportType('fuels'); setNoDataMessage(null); }}
               className={`p-6 rounded-2xl border-2 transition-all text-left ${reportType === 'fuels' ? 'border-[#58CC02] bg-green-50/30 shadow-lg shadow-green-50' : 'border-slate-50 bg-slate-50/50 hover:bg-white hover:border-slate-200'}`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${reportType === 'fuels' ? 'bg-[#58CC02] text-white' : 'bg-slate-100 text-slate-400'}`}>
@@ -212,7 +221,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
             </button>
 
             <button 
-              onClick={() => setReportType('lubricants')}
+              onClick={() => { setReportType('lubricants'); setNoDataMessage(null); }}
               className={`p-6 rounded-2xl border-2 transition-all text-left ${reportType === 'lubricants' ? 'border-[#FFA500] bg-orange-50/30 shadow-lg shadow-orange-50' : 'border-slate-50 bg-slate-50/50 hover:bg-white hover:border-slate-200'}`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${reportType === 'lubricants' ? 'bg-[#FFA500] text-white' : 'bg-slate-100 text-slate-400'}`}>
@@ -229,14 +238,23 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-4">De:</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 outline-none focus:bg-white focus:border-[#1E90FF] font-black text-sm text-[#0A2540]" />
+              <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setNoDataMessage(null); }} className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 outline-none focus:bg-white focus:border-[#1E90FF] font-black text-sm text-[#0A2540]" />
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-4">Até:</label>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 outline-none focus:bg-white focus:border-[#1E90FF] font-black text-sm text-[#0A2540]" />
+              <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setNoDataMessage(null); }} className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 outline-none focus:bg-white focus:border-[#1E90FF] font-black text-sm text-[#0A2540]" />
             </div>
           </div>
         </div>
+
+        {noDataMessage && (
+          <div className="bg-orange-50 border-2 border-orange-100 p-6 rounded-[2rem] flex items-center gap-4 animate-in shake duration-300">
+            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 shrink-0">
+               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <p className="text-sm font-bold text-orange-700 leading-tight">{noDataMessage}</p>
+          </div>
+        )}
 
         <div className="pt-6 border-t border-slate-50">
           <button 

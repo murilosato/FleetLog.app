@@ -13,9 +13,11 @@ interface AdminPanelProps {
 const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onBack }) => {
   const [tab, setTab] = useState<'vehicles' | 'items' | 'fuels' | 'lubricants'>('vehicles');
   const [loading, setLoading] = useState(false);
+  const [processingId, setProcessingId] = useState<string | number | null>(null);
   const [fuelTypes, setFuelTypes] = useState<FuelType[]>([]);
   const [lubricantTypes, setLubricantTypes] = useState<LubricantType[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
 
   // Global Settings States
   const [globalMaxKm, setGlobalMaxKm] = useState('500');
@@ -186,27 +188,39 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
     }
   };
 
-  const handleDelete = async (table: string, id: any) => {
-    if (!confirm("Deseja realmente EXCLUIR este item permanentemente?")) return;
-    setLoading(true);
+  const handleToggleStatus = async (table: string, id: any, currentStatus: boolean) => {
+    const action = currentStatus ? 'DESATIVAR' : 'REATIVAR';
+    if (!confirm(`Deseja realmente ${action} este item?`)) return;
+    
+    setProcessingId(id);
     try {
-      // Tenta exclusão direta (delete) para tabelas de insumos conforme solicitado
-      const { error } = await supabase.from(table).delete().eq('id', id);
-      if (error) {
-        // Se falhar (ex: por restrição de chave estrangeira), tenta desativação lógica
-        await supabase.from(table).update({ active: false }).eq('id', id);
-      }
+      const { error } = await supabase
+        .from(table)
+        .update({ active: !currentStatus })
+        .eq('id', id);
+        
+      if (error) throw error;
       
-      if (table === 'fuel_types' || table === 'lubricant_types') fetchData();
-      else onRefresh();
+      if (table === 'fuel_types' || table === 'lubricant_types') {
+        await fetchData();
+      } else {
+        await onRefresh();
+      }
     } catch (err: any) {
-      alert("Erro ao excluir: " + err.message);
+      alert("Erro ao alterar status: " + err.message);
     } finally {
-      setLoading(false);
+      setProcessingId(null);
     }
   };
 
   const categories = Array.from(new Set(items.map(i => i.category)));
+
+  const LoadingIcon = () => (
+    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-700">
@@ -230,8 +244,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
         </div>
       </div>
 
+      <div className="flex justify-end px-4">
+        <button 
+          onClick={() => setShowInactive(!showInactive)}
+          className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 shadow-sm ${showInactive ? 'bg-[#0A2540] text-white border-[#0A2540]' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}
+        >
+          {showInactive ? 'Ocultar Inativos' : 'Mostrar Inativos'}
+        </button>
+      </div>
+
       {tab === 'vehicles' && (
         <div className="space-y-10">
+          {/* Cadastro de Veículos */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-[3rem] border shadow-sm border-slate-100 lg:col-span-1">
               <h3 className="font-black text-[#0A2540] text-lg mb-6 uppercase flex items-center gap-3">
@@ -281,25 +305,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
             </div>
           </div>
 
+          {/* Lista de Veículos */}
           <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
              <div className="flex items-center gap-4 mb-8 bg-slate-50 p-4 rounded-2xl">
                 <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Pesquisar por prefixo ou placa..." className="bg-transparent border-0 outline-none font-black text-sm w-full text-[#0A2540]" />
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {vehicles.filter(v => v.active !== false && (v.prefix.toLowerCase().includes(searchTerm.toLowerCase()) || v.plate.toLowerCase().includes(searchTerm.toLowerCase()))).map(v => (
-                  <div key={v.id} className="p-6 rounded-[2.5rem] bg-slate-50/50 border-2 border-white shadow-sm flex flex-col group hover:border-[#1E90FF] transition-all">
+                {vehicles.filter(v => (showInactive || v.active !== false) && (v.prefix.toLowerCase().includes(searchTerm.toLowerCase()) || v.plate.toLowerCase().includes(searchTerm.toLowerCase()))).map(v => (
+                  <div key={v.id} className={`p-6 rounded-[2.5rem] border-2 shadow-sm flex flex-col transition-all ${v.active === false ? 'bg-slate-50/40 border-slate-200 opacity-60 grayscale' : 'bg-slate-50/50 border-white shadow-sm'}`}>
                      <div className="flex justify-between items-start mb-6">
                         <div>
-                           <span className="text-2xl font-black text-[#0A2540]">{v.prefix}</span>
+                           <span className={`text-2xl font-black ${v.active === false ? 'text-slate-400' : 'text-[#0A2540]'}`}>{v.prefix}</span>
                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{v.plate}</p>
+                           {v.active === false && <span className="text-[8px] font-black bg-slate-200 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-widest mt-1 inline-block">Inativo</span>}
                         </div>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button onClick={() => { setEditingId(v.id); setEditData(v); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 bg-white rounded-xl text-blue-500 hover:bg-blue-50 transition-all shadow-sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        <div className="flex gap-2">
+                           <button onClick={() => { setEditingId(v.id); setEditData(v); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-3 bg-white rounded-xl text-blue-500 hover:bg-blue-50 transition-all shadow-md active:scale-95">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                            </button>
-                           <button onClick={() => handleDelete('vehicles', v.id)} className="p-2.5 bg-white rounded-xl text-red-500 hover:bg-red-50 transition-all shadow-sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                           <button 
+                            disabled={processingId === v.id}
+                            onClick={() => handleToggleStatus('vehicles', v.id, v.active !== false)} 
+                            className={`p-3 bg-white rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center min-w-[44px] ${v.active === false ? 'text-green-500 hover:bg-green-50' : 'text-red-400 hover:bg-red-50'}`}
+                           >
+                              {processingId === v.id ? <LoadingIcon /> : (
+                                v.active === false ? (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                                ) : (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                )
+                              )}
                            </button>
                         </div>
                      </div>
@@ -322,6 +358,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
       {tab === 'items' && (
         <div className="space-y-10 animate-in fade-in">
+           {/* Cadastro de Itens */}
            <div className="bg-white p-10 rounded-[3.5rem] border shadow-sm border-slate-100">
              <h3 className="font-black text-[#0A2540] text-xl mb-8 uppercase flex items-center gap-4">
                <div className="w-2 h-8 bg-[#1E90FF] rounded-full"></div>
@@ -352,20 +389,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
              </form>
            </div>
 
+           {/* Lista de Itens */}
            <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {items.filter(i => i.active !== false).map(item => (
-                  <div key={item.id} className="p-5 bg-white border-2 border-slate-50 rounded-2xl flex items-center justify-between shadow-sm group hover:border-[#1E90FF] transition-all">
+                {items.filter(i => showInactive || i.active !== false).map(item => (
+                  <div key={item.id} className={`p-5 rounded-2xl border-2 flex items-center justify-between shadow-sm transition-all ${item.active === false ? 'bg-slate-50/40 border-slate-200 opacity-60 grayscale' : 'bg-white border-slate-50 shadow-sm'}`}>
                      <div className="truncate pr-4">
-                        <p className="text-[11px] font-black text-[#0A2540] truncate">{item.id}. {item.label}</p>
+                        <p className={`text-[11px] font-black truncate ${item.active === false ? 'text-slate-400' : 'text-[#0A2540]'}`}>{item.id}. {item.label}</p>
                         <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">{item.category}</p>
                      </div>
                      <div className="flex gap-2">
-                        <button onClick={() => { setEditingId(item.id); setEditData(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 bg-slate-50 rounded-xl text-blue-500 hover:bg-blue-100 transition-all">
+                        <button onClick={() => { setEditingId(item.id); setEditData(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-3 bg-slate-50 rounded-xl text-blue-500 hover:bg-blue-100 transition-all shadow-sm active:scale-95">
                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
-                        <button onClick={() => handleDelete('checklist_items', item.id)} className="p-2.5 bg-slate-50 rounded-xl text-red-500 hover:bg-red-100 transition-all">
-                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <button 
+                          disabled={processingId === item.id}
+                          onClick={() => handleToggleStatus('checklist_items', item.id, item.active !== false)} 
+                          className={`p-3 bg-slate-50 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center min-w-[40px] ${item.active === false ? 'text-green-500 hover:bg-green-100' : 'text-red-400 hover:bg-red-100'}`}
+                        >
+                           {processingId === item.id ? <LoadingIcon /> : (
+                             item.active === false ? (
+                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                             ) : (
+                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                             )
+                           )}
                         </button>
                      </div>
                   </div>
@@ -377,6 +425,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
       {(tab === 'fuels' || tab === 'lubricants') && (
         <div className="space-y-10 animate-in fade-in">
+           {/* Cadastro de Insumos */}
            <div className="bg-white p-10 rounded-[3.5rem] border shadow-sm border-slate-100">
              <h3 className="font-black text-[#0A2540] text-xl mb-8 uppercase flex items-center gap-4">
                <div className={`w-2 h-8 rounded-full ${tab === 'fuels' ? 'bg-[#58CC02]' : 'bg-[#FFA500]'}`}></div>
@@ -393,17 +442,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                 </div>
              </form>
            </div>
+           
+           {/* Lista de Insumos */}
            <div className="bg-white p-10 rounded-[3.5rem] border shadow-sm border-slate-100">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 {(tab === 'fuels' ? fuelTypes : lubricantTypes).filter(f => f.active !== false).map(f => (
-                   <div key={f.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group hover:bg-white hover:shadow-sm transition-all">
-                      <span className="text-[10px] font-black uppercase text-[#0A2540]">{f.name}</span>
-                      <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditingId(f.id); setEditData(f); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-blue-500 hover:text-blue-700">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                 {(tab === 'fuels' ? fuelTypes : lubricantTypes).filter(f => showInactive || f.active !== false).map(f => (
+                   <div key={f.id} className={`p-5 rounded-2xl border flex items-center justify-between shadow-sm transition-all ${f.active === false ? 'bg-slate-50/40 border-slate-200 opacity-60 grayscale' : 'bg-slate-50 border-slate-100 shadow-sm'}`}>
+                      <span className={`text-[10px] font-black uppercase ${f.active === false ? 'text-slate-400' : 'text-[#0A2540]'}`}>{f.name}</span>
+                      <div className="flex gap-3">
+                        <button onClick={() => { setEditingId(f.id); setEditData(f); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-blue-500 hover:text-blue-700 active:scale-95">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
-                        <button onClick={() => handleDelete(tab === 'fuels' ? 'fuel_types' : 'lubricant_types', f.id)} className="text-red-400 hover:text-red-600">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <button 
+                          disabled={processingId === f.id}
+                          onClick={() => handleToggleStatus(tab === 'fuels' ? 'fuel_types' : 'lubricant_types', f.id, f.active !== false)} 
+                          className={`flex items-center justify-center min-w-[32px] active:scale-95 ${f.active === false ? 'text-green-500' : 'text-red-400'}`}
+                        >
+                          {processingId === f.id ? <LoadingIcon /> : (
+                             f.active === false ? (
+                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                             ) : (
+                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                             )
+                           )}
                         </button>
                       </div>
                    </div>

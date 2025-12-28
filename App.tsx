@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { User, ChecklistEntry, Vehicle, DBChecklistItem } from './types';
+import { User, ChecklistEntry, Vehicle, DBChecklistItem, RefuelingEntry, LubricantEntry } from './types';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ChecklistForm from './components/ChecklistForm';
@@ -18,6 +18,8 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<'dashboard' | 'form' | 'refueling' | 'lubricant' | 'history_portal' | 'history_checklists' | 'history_records' | 'admin' | 'reports'>('dashboard');
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
+  const [refuelingEntries, setRefuelingEntries] = useState<RefuelingEntry[]>([]);
+  const [lubricantEntries, setLubricantEntries] = useState<LubricantEntry[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [checklistItems, setChecklistItems] = useState<DBChecklistItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -25,18 +27,20 @@ const App: React.FC = () => {
   
   const syncingRef = useRef(false);
 
-  const fetchEntries = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!navigator.onLine) return;
     try {
-      const { data, error } = await supabase
-        .from('entries')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [eRes, rRes, lRes] = await Promise.all([
+        supabase.from('entries').select('*').order('created_at', { ascending: false }),
+        supabase.from('refueling_entries').select('*'),
+        supabase.from('lubricant_entries').select('*')
+      ]);
 
-      if (error) throw error;
-      if (data) setEntries(data as ChecklistEntry[]);
+      if (eRes.data) setEntries(eRes.data as ChecklistEntry[]);
+      if (rRes.data) setRefuelingEntries(rRes.data as RefuelingEntry[]);
+      if (lRes.data) setLubricantEntries(lRes.data as LubricantEntry[]);
     } catch (err) {
-      console.error('Erro ao buscar entradas:', err);
+      console.error('Erro ao buscar dados:', err);
     }
   }, []);
 
@@ -82,8 +86,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user) fetchEntries();
-  }, [user, fetchEntries]);
+    if (user) fetchData();
+  }, [user, fetchData]);
 
   const handleLogin = (userData: User) => setUser(userData);
   const handleLogout = () => { setUser(null); setView('dashboard'); };
@@ -100,7 +104,7 @@ const App: React.FC = () => {
       const { error } = await supabase.from('entries').insert([entry]);
       if (error) throw error;
       await supabase.from('vehicles').update({ current_km: entry.km, current_horimetro: entry.horimetro }).eq('id', entry.vehicle_id);
-      await fetchEntries();
+      await fetchData();
       await initAppData();
       setView('dashboard');
     } catch (err) {
@@ -165,23 +169,25 @@ const App: React.FC = () => {
         {view === 'dashboard' && (
           <Dashboard 
             submissions={entries} 
+            refuelings={refuelingEntries}
+            lubricants={lubricantEntries}
             user={user}
             availableItems={checklistItems}
             onNewChecklist={() => setView('form')} 
             onNewRefueling={() => setView('refueling')}
             onNewLubricant={() => setView('lubricant')}
             onViewHistory={() => setView('history_portal')}
-            onRefresh={fetchEntries}
+            onRefresh={fetchData}
             aiSummary={null}
             isSummarizing={false}
             generateAiReport={() => {}}
           />
         )}
         {view === 'form' && <ChecklistForm user={user} vehicles={vehicles} availableItems={checklistItems} onSubmit={handleSubmitEntry} onCancel={() => setView('dashboard')} />}
-        {view === 'refueling' && <RefuelingForm user={user} vehicles={vehicles} onSubmit={() => { fetchEntries(); initAppData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
-        {view === 'lubricant' && <LubricantForm user={user} vehicles={vehicles} onSubmit={() => { fetchEntries(); initAppData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
+        {view === 'refueling' && <RefuelingForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); initAppData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
+        {view === 'lubricant' && <LubricantForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); initAppData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
         {view === 'history_portal' && <HistoryPortal onSelectChecklists={() => setView('history_checklists')} onSelectRecords={() => setView('history_records')} onBack={() => setView('dashboard')} />}
-        {view === 'history_checklists' && <HistoryView submissions={entries} user={user} users={users} availableItems={checklistItems} onBack={() => setView('history_portal')} onRefresh={fetchEntries} />}
+        {view === 'history_checklists' && <HistoryView submissions={entries} user={user} users={users} availableItems={checklistItems} onBack={() => setView('history_portal')} onRefresh={fetchData} />}
         {view === 'history_records' && <RecordsHistoryView onBack={() => setView('history_portal')} />}
         {view === 'admin' && <AdminPanel vehicles={vehicles} items={checklistItems} onRefresh={initAppData} onBack={() => setView('dashboard')} />}
         {view === 'reports' && <ReportsView availableItems={checklistItems} onBack={() => setView('dashboard')} />}
