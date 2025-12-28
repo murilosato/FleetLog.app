@@ -41,7 +41,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     return list;
   }, [submissions, user, dateFilter]);
 
-  const formatTime = (ts: number) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (ts: number) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   const getItemLabel = (id: string) => {
     const numericId = parseInt(id);
@@ -159,9 +159,20 @@ const HistoryView: React.FC<HistoryViewProps> = ({
           {selected ? (
             <div className="bg-white rounded-[2.5rem] sm:rounded-[3.5rem] shadow-sm border border-slate-100 p-6 sm:p-10 space-y-8 sm:space-y-10 animate-in fade-in duration-500">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-50 pb-6 sm:pb-8">
-                <div>
+                <div className="space-y-1">
                   <h3 className="text-4xl sm:text-5xl font-black text-[#0A2540] tracking-tighter">{selected.prefix}</h3>
-                  <p className="text-slate-400 font-bold mt-1 uppercase tracking-widest text-[10px] sm:text-xs">{formatDateDisplay(selected.date)} • {selected.type}</p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] sm:text-xs">
+                      {formatDateDisplay(selected.date)} às {formatTime(selected.created_at)}
+                    </p>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full hidden sm:block"></span>
+                    <p className="text-[#1E90FF] font-black uppercase tracking-widest text-[10px] sm:text-xs">
+                      {selected.type} - {selected.shift}
+                    </p>
+                  </div>
+                  <p className="text-slate-500 font-bold text-[11px] sm:text-xs mt-2 bg-slate-50 px-3 py-1.5 rounded-lg inline-block border border-slate-100">
+                    REALIZADO POR: <span className="text-[#0A2540] font-black uppercase">{selected.driver_name}</span>
+                  </p>
                 </div>
                 {(user.role === 'OPERACAO' || user.role === 'ADMIN') && !isEditing && (
                   <button onClick={handleStartEdit} className="w-full sm:w-auto bg-[#1E90FF]/10 text-[#1E90FF] px-5 sm:px-6 py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#1E90FF] hover:text-white transition-all active:scale-95">
@@ -187,11 +198,22 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                               >{s}</button>
                             ))}
                           </div>
+                          {(editItems[id]?.status === ItemStatus.DEFECTIVE || editItems[id]?.status === ItemStatus.MISSING) && (
+                            <input 
+                              value={editItems[id]?.observations || ''}
+                              onChange={e => setEditItems(prev => ({ ...prev, [id]: { ...prev[id], observations: e.target.value } }))}
+                              placeholder="Observação do defeito..."
+                              className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-950 outline-none"
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
-                  <textarea value={editObs} onChange={e => setEditObs(e.target.value)} className="w-full p-5 sm:p-6 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] sm:rounded-[2.5rem] text-xs sm:text-sm font-bold outline-none h-24 sm:h-28 focus:bg-white focus:border-[#1E90FF] transition-all" placeholder="Justificativa..." />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Observações Gerais</label>
+                    <textarea value={editObs} onChange={e => setEditObs(e.target.value)} className="w-full p-5 sm:p-6 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] sm:rounded-[2.5rem] text-xs sm:text-sm font-bold text-slate-950 outline-none h-24 sm:h-28 focus:bg-white focus:border-[#1E90FF] transition-all" placeholder="Justificativa da alteração ou observação geral..." />
+                  </div>
                   <div className="flex gap-3 sm:gap-4">
                     <button onClick={() => setIsEditing(false)} className="flex-1 py-4 sm:py-5 bg-slate-100 text-slate-500 rounded-2xl sm:rounded-3xl font-black text-[10px] uppercase tracking-widest active:scale-95">Descartar</button>
                     <button onClick={handleSaveEdit} disabled={isSaving} className="flex-1 py-4 sm:py-5 bg-[#58CC02] text-white rounded-2xl sm:rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95">
@@ -205,7 +227,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                     <div className="p-4 sm:p-6 bg-slate-50 rounded-2xl sm:rounded-3xl"><p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 sm:mb-2">KM</p><p className="font-black text-lg sm:text-xl text-[#0A2540]">{selected.km}</p></div>
                     <div className="p-4 sm:p-6 bg-slate-50 rounded-2xl sm:rounded-3xl"><p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 sm:mb-2">HOR</p><p className="font-black text-lg sm:text-xl text-[#0A2540]">{selected.horimetro}</p></div>
                     <div className="p-4 sm:p-6 bg-slate-50 rounded-2xl sm:rounded-3xl"><p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 sm:mb-2">Turno</p><p className="font-black text-lg sm:text-xl text-[#0A2540]">{selected.shift}</p></div>
-                    <div className="p-4 sm:p-6 bg-slate-50 rounded-2xl sm:rounded-3xl"><p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 sm:mb-2">Matric.</p><p className="font-black text-lg sm:text-xl text-[#0A2540]">{selected.driver_name.split(' ')[0]}</p></div>
+                    <div className="p-4 sm:p-6 bg-slate-50 rounded-2xl sm:rounded-3xl"><p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 sm:mb-2">Prefix</p><p className="font-black text-lg sm:text-xl text-[#0A2540]">{selected.prefix}</p></div>
                   </div>
 
                   <div className="space-y-5 sm:space-y-6">
@@ -213,18 +235,42 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                         <div className="w-1.5 h-6 sm:w-2 sm:h-6 bg-[#1E90FF] rounded-full"></div>
                         Checklist Verificado
                      </h4>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                        {Object.entries(selected.items).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([id, data]: [string, any]) => (
-                          <div key={id} className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 ${data.status === ItemStatus.OK ? 'bg-white border-slate-50' : (data.surveyed ? 'bg-red-50 border-red-50 text-red-700' : 'bg-slate-50 border-slate-100 opacity-60')}`}>
-                             <div className="flex flex-col flex-1 truncate pr-3">
-                                <span className={`text-[11px] sm:text-xs font-black truncate leading-tight ${data.surveyed ? 'text-slate-600' : 'text-slate-400 italic'}`}>{getItemLabel(id)}</span>
-                                {!data.surveyed && <span className="text-[7px] uppercase font-bold text-slate-400">Não Vistoriado</span>}
+                          <div key={id} className={`flex flex-col p-4 rounded-2xl border-2 transition-all ${data.status === ItemStatus.OK ? 'bg-white border-slate-50' : (data.surveyed ? 'bg-red-50 border-red-50' : 'bg-slate-50 border-slate-100 opacity-60')}`}>
+                             <div className="flex items-center justify-between gap-3">
+                                <div className="flex flex-col flex-1 truncate pr-3">
+                                   <span className={`text-[11px] sm:text-xs font-black truncate leading-tight ${data.surveyed ? 'text-slate-800' : 'text-slate-400 italic'}`}>{getItemLabel(id)}</span>
+                                   {!data.surveyed && <span className="text-[7px] uppercase font-bold text-slate-400">Não Vistoriado</span>}
+                                </div>
+                                {data.surveyed && (
+                                   <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl uppercase shrink-0 shadow-sm ${data.status === ItemStatus.OK ? 'bg-[#58CC02] text-white' : 'bg-red-600 text-white'}`}>{getStatusDisplay(data.status)}</span>
+                                )}
                              </div>
-                             {data.surveyed && (
-                                <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl uppercase shrink-0 shadow-sm ${data.status === ItemStatus.OK ? 'bg-[#58CC02] text-white' : 'bg-red-600 text-white'}`}>{getStatusDisplay(data.status)}</span>
+                             {data.observations && (
+                               <div className="mt-3 p-2.5 bg-black/5 rounded-xl border border-black/5">
+                                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Observação do Item:</p>
+                                 <p className="text-[11px] font-bold text-slate-950 leading-relaxed">"{data.observations}"</p>
+                               </div>
                              )}
                           </div>
                        ))}
+                     </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4">
+                     <h4 className="font-black text-[#0A2540] text-lg sm:text-xl uppercase tracking-tight flex items-center gap-2 sm:gap-3">
+                        <div className="w-1.5 h-6 sm:w-2 sm:h-6 bg-slate-300 rounded-full"></div>
+                        Observações Gerais
+                     </h4>
+                     <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 min-h-[100px]">
+                        {selected.general_observations ? (
+                          <p className="text-sm font-bold text-slate-950 leading-relaxed">
+                            {selected.general_observations}
+                          </p>
+                        ) : (
+                          <p className="text-xs font-bold text-slate-300 italic">Nenhuma observação geral registrada para esta vistoria.</p>
+                        )}
                      </div>
                   </div>
 
@@ -235,9 +281,9 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                      </h4>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                        <div className="p-5 sm:p-6 bg-[#0A2540] text-white rounded-[1.8rem] sm:rounded-[2.5rem] text-center shadow-lg">
-                          <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest opacity-60 mb-1 sm:mb-2">Motorista</p>
+                          <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest opacity-60 mb-1 sm:mb-2">Motorista (Vistoriador)</p>
                           <p className="font-black truncate text-xs sm:text-sm">{selected.driver_name}</p>
-                          <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] bg-[#58CC02] text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest">ASSINADO</span>
+                          <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] bg-[#58CC02] text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest">CONFIRMADO</span>
                        </div>
                        <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.operation_checked ? 'bg-orange-50 border-orange-100' : 'bg-slate-50 border-dashed border-slate-200 opacity-60'}`}>
                           <p className="text-[8px] sm:text-[9px] font-black text-orange-600 uppercase tracking-widest mb-1 sm:mb-2">Operação</p>
