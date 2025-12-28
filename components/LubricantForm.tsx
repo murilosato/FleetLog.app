@@ -140,7 +140,7 @@ const LubricantForm: React.FC<LubricantFormProps> = ({ user, vehicles, onSubmit,
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Veículo</label>
           <select 
-            className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#FFA500] transition-all" 
+            className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#FFA500] transition-all" 
             onChange={e => {
               const v = vehicles.find(v => v.id === e.target.value);
               if (v) { 
@@ -172,23 +172,23 @@ const LubricantForm: React.FC<LubricantFormProps> = ({ user, vehicles, onSubmit,
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">KM Atual</label>
-            <input type="number" value={km} onChange={e => setKm(Number(e.target.value))} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#FFA500] transition-all" required />
+            <input type="number" value={km} onChange={e => setKm(Number(e.target.value))} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#FFA500] transition-all" required />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Horímetro</label>
-            <input type="number" value={hor} onChange={e => setHor(Number(e.target.value))} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#FFA500] transition-all" required />
+            <input type="number" value={hor} onChange={e => setHor(Number(e.target.value))} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#FFA500] transition-all" required />
           </div>
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Tipo de Lubrificante</label>
-          <select value={selectedLub} onChange={e => setSelectedLub(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#FFA500] transition-all" required>
+          <select value={selectedLub} onChange={e => setSelectedLub(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#FFA500] transition-all" required>
             <option value="">Selecionar...</option>
             {lubricantTypes.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Quantidade (L/Kg)</label>
-          <input type="number" step="0.01" value={qty} onChange={e => setQty(e.target.value)} placeholder="0.00" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#FFA500] transition-all" required />
+          <input type="number" step="0.01" value={qty} onChange={e => setQty(e.target.value)} placeholder="0.00" className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#FFA500] transition-all" required />
         </div>
         <div className="flex gap-4 pt-4">
           <button type="button" onClick={onCancel} className="flex-1 py-5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors">Cancelar</button>

@@ -250,15 +250,6 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
       });
   }, [itemResponses, validAvailableItems]);
 
-  const nonSurveyedSummary = useMemo(() => {
-    return Object.entries(itemResponses)
-      .filter(([id, data]) => !(data as any).surveyed)
-      .map(([id, _]) => {
-        const itemInfo = validAvailableItems.find(i => i.id.toString() === id);
-        return itemInfo ? `${itemInfo.id}. ${itemInfo.label}` : `Item ${id}`;
-      });
-  }, [itemResponses, validAvailableItems]);
-
   const renderItemRow = (item: DBChecklistItem) => {
     const isDivergent = divergenceItems.includes(item.id);
     const response = itemResponses[item.id];
@@ -304,7 +295,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
               <input 
                 value={response.observations || ''}
                 placeholder="Relate o motivo aqui..." 
-                className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-slate-700 outline-none focus:border-slate-300 transition-all"
+                className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-slate-950 outline-none focus:border-slate-300 transition-all"
                 onChange={e => setItemResponses(prev => ({...prev, [item.id]: {...(prev[item.id] as any), observations: e.target.value}}))}
               />
             )}
@@ -365,14 +356,14 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
              <div className="grid grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-2 sm:space-y-3">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Operação</label>
-                  <select className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={type} onChange={e => setType(e.target.value as any)}>
+                  <select className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={type} onChange={e => setType(e.target.value as any)}>
                     <option value="Saída">Saída</option>
                     <option value="Retorno">Retorno</option>
                   </select>
                 </div>
                 <div className="space-y-2 sm:space-y-3">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Turno</label>
-                  <select className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={shift} onChange={e => setShift(e.target.value)}>
+                  <select className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={shift} onChange={e => setShift(e.target.value)}>
                     <option value="Diurno">Diurno</option>
                     <option value="Noturno">Noturno</option>
                   </select>
@@ -380,9 +371,9 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
              </div>
 
              <div className="space-y-2 sm:space-y-3">
-                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Prefixo ecoSCheck</label>
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Prefixo FleetLog</label>
                 <select 
-                  className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base"
+                  className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base"
                   onChange={e => {
                     const v = vehicles.find(v => v.id === e.target.value);
                     if (v) {
@@ -406,11 +397,11 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
              <div className="grid grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-2 sm:space-y-3">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">KM Atual</label>
-                  <input type="number" className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={km} onChange={e => setKm(Number(e.target.value))} />
+                  <input type="number" className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={km} onChange={e => setKm(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2 sm:space-y-3">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Horímetro</label>
-                  <input type="number" className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-800 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={horimetro} onChange={e => setHorimetro(Number(e.target.value))} />
+                  <input type="number" className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base" value={horimetro} onChange={e => setHorimetro(Number(e.target.value))} />
                 </div>
              </div>
           </div>
@@ -462,21 +453,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
                   </div>
                 )}
 
-                {nonSurveyedSummary.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Itens não Vistoriados</p>
-                    <div className="bg-slate-50 rounded-[1.8rem] sm:rounded-[2.5rem] p-6 sm:p-8 border border-slate-200 space-y-3">
-                      {nonSurveyedSummary.map((label, idx) => (
-                        <div key={idx} className="flex items-center justify-between border-b border-slate-100 last:border-0 pb-2 last:pb-0 gap-3">
-                          <span className="text-xs sm:text-sm font-bold text-slate-400 italic">{label}</span>
-                          <span className="text-[8px] font-black px-2 py-1 bg-slate-200 text-slate-500 rounded-lg uppercase">N/V</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {issuesSummary.length === 0 && nonSurveyedSummary.length === 0 && (
+                {issuesSummary.length === 0 && (
                   <div className="bg-[#58CC02]/10 rounded-[1.8rem] sm:rounded-[2.5rem] p-8 sm:p-10 border border-[#58CC02]/20 text-center">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#58CC02] text-white rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-xl shadow-green-100">
                         <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>
@@ -505,7 +482,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
              </div>
 
              <textarea 
-                className="w-full p-4 sm:p-6 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[2.5rem] h-28 sm:h-32 font-bold outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-xs sm:text-sm"
+                className="w-full p-4 sm:p-6 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[2.5rem] h-28 sm:h-32 font-bold text-slate-950 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-xs sm:text-sm"
                 value={generalObs}
                 onChange={e => setGeneralObs(e.target.value)}
                 placeholder="Observações adicionais da operação..."

@@ -151,7 +151,7 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Veículo</label>
           <select 
-            className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#58CC02] transition-all" 
+            className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#58CC02] transition-all" 
             onChange={e => {
               const v = vehicles.find(v => v.id === e.target.value);
               if (v) { setSelectedVehicle(v); setKm(v.current_km); setHor(v.current_horimetro); }
@@ -179,23 +179,23 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">KM Atual</label>
-            <input type="number" value={km} onChange={e => setKm(Number(e.target.value))} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#58CC02] transition-all" required />
+            <input type="number" value={km} onChange={e => setKm(Number(e.target.value))} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#58CC02] transition-all" required />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Horímetro</label>
-            <input type="number" value={hor} onChange={e => setHor(Number(e.target.value))} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#58CC02] transition-all" required />
+            <input type="number" value={hor} onChange={e => setHor(Number(e.target.value))} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#58CC02] transition-all" required />
           </div>
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Tipo de Combustível</label>
-          <select value={selectedFuel} onChange={e => setSelectedFuel(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#58CC02] transition-all" required>
+          <select value={selectedFuel} onChange={e => setSelectedFuel(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#58CC02] transition-all" required>
             <option value="">Selecionar...</option>
             {fuelTypes.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select>
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Quantidade (Litros)</label>
-          <input type="number" step="0.01" value={qty} onChange={e => setQty(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#58CC02] transition-all" required />
+          <input type="number" step="0.01" value={qty} onChange={e => setQty(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#58CC02] transition-all" required />
         </div>
         <div className="pt-2">
            <button type="button" onClick={() => setShowArla(!showArla)} className={`flex items-center gap-3 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showArla ? 'bg-[#1E90FF] text-white shadow-lg' : 'bg-slate-50 text-slate-400 border-2 border-slate-100'}`}>
@@ -205,7 +205,7 @@ const RefuelingForm: React.FC<RefuelingFormProps> = ({ user, vehicles, onSubmit,
         {showArla && (
           <div className="space-y-2">
             <label className="text-[10px] font-black text-[#1E90FF] uppercase tracking-widest ml-1">Quantidade ARLA 32 (Litros)</label>
-            <input type="number" step="0.01" value={arlaQty} onChange={e => setArlaQty(e.target.value)} className="w-full p-5 bg-blue-50 border-2 border-blue-100 rounded-[1.8rem] font-black text-sm outline-none focus:bg-white focus:border-[#1E90FF] transition-all" required />
+            <input type="number" step="0.01" value={arlaQty} onChange={e => setArlaQty(e.target.value)} className="w-full p-5 bg-blue-50 border-2 border-blue-100 rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#1E90FF] transition-all" required />
           </div>
         )}
         <div className="flex gap-4 pt-4">
