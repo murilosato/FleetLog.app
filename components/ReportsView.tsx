@@ -61,15 +61,17 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
           s.type,
           s.shift,
           s.driver_name,
-          s.km,
-          s.horimetro,
+          s.km.toString(),
+          s.horimetro.toString(),
           s.has_issues ? 'SIM' : 'NÃO',
           (s.general_observations || '').replace(/(\r\n|\n|\r|")/gm, " ")
         ];
 
         const itemData: string[] = [];
         itemsToExport.forEach(item => {
-          const sItem = s.items[item.id.toString()];
+          // Busca robusta pela chave (string ou number)
+          const sItem = s.items ? (s.items[item.id.toString()] || s.items[item.id]) : null;
+          
           if (sItem) {
             itemData.push(sItem.status || 'OK');
             itemData.push((sItem.observations || '').replace(/(\r\n|\n|\r|")/gm, " "));
@@ -111,11 +113,11 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
       const rows = data.map((d: any) => [
         new Date(d.event_at).toLocaleString('pt-BR'),
         d.prefix,
-        d.km,
-        d.horimetro,
+        d.km.toString(),
+        d.horimetro.toString(),
         d.fuel_name,
-        d.quantity,
-        d.arla_quantity || 0,
+        d.quantity.toString(),
+        (d.arla_quantity || 0).toString(),
         d.user_name || 'Admin'
       ]);
 
@@ -148,10 +150,10 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
       const rows = data.map((d: any) => [
         new Date(d.event_at).toLocaleString('pt-BR'),
         d.prefix,
-        d.km,
-        d.horimetro,
+        d.km.toString(),
+        d.horimetro.toString(),
         d.lubricant_name,
-        d.quantity,
+        d.quantity.toString(),
         d.user_name || 'Admin'
       ]);
 
@@ -164,9 +166,15 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
   };
 
   const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
+    // Usando ponto e vírgula (;) como separador padrão para Excel em Português (Brasil)
+    const separator = ';';
     const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      headers.join(separator),
+      ...rows.map(row => row.map(cell => {
+        const str = cell ? cell.toString() : '';
+        // Escapa aspas duplas e envolve o conteúdo em aspas se necessário
+        return `"${str.replace(/"/g, '""')}"`;
+      }).join(separator))
     ].join('\n');
 
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
