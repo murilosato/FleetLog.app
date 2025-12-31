@@ -23,10 +23,12 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 }) => {
   const [selected, setSelected] = useState<ChecklistEntry | null>(null);
   const [dateFilter, setDateFilter] = useState('');
+  const [onlyPending, setOnlyPending] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editItems, setEditItems] = useState<Record<string, any>>({});
   const [editObs, setEditObs] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -38,8 +40,15 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     let list = submissions;
     if (user.role === 'OPERADOR') list = list.filter(s => s.user_id === user.id);
     if (dateFilter) list = list.filter(s => s.date === dateFilter);
+    if (onlyPending) {
+      list = list.filter(s => !s.operation_checked || !s.maintenance_checked);
+    }
     return list;
-  }, [submissions, user, dateFilter]);
+  }, [submissions, user, dateFilter, onlyPending]);
+
+  const pendingCount = useMemo(() => {
+    return submissions.filter(s => !s.operation_checked || !s.maintenance_checked).length;
+  }, [submissions]);
 
   const formatTime = (ts: number) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -63,7 +72,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     const checked = field === 'maintenance' ? entry.maintenance_checked : entry.operation_checked;
     
     if (checked && !userId) return 'DISPENSA AUTOMÁTICA';
-    if (!checked) return 'PENDENTE';
+    if (!checked) return 'AGUARDANDO ASSINATURA';
     
     const u = users.find(u => u.id === userId);
     return u ? u.name : userId || 'VALIDADO';
@@ -74,6 +83,42 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     if (status === ItemStatus.DEFECTIVE) return 'DEFEITO';
     if (status === ItemStatus.MISSING) return 'FALTA';
     return status || 'Pendente';
+  };
+
+  const handleQuickValidate = async (field: 'operation' | 'maintenance') => {
+    if (!selected || !onRefresh) return;
+    
+    const confirmMsg = field === 'operation' 
+      ? "Confirmar assinatura da Operação para este checklist?" 
+      : "Confirmar assinatura da Manutenção/Mecânica para este checklist?";
+
+    if (!confirm(confirmMsg)) return;
+
+    setIsValidating(true);
+    try {
+      const updateData: any = {};
+      if (field === 'operation') {
+        updateData.operation_checked = true;
+        updateData.operation_user_id = user.id;
+      } else {
+        updateData.maintenance_checked = true;
+        updateData.maintenance_user_id = user.id;
+      }
+
+      const { error } = await supabase
+        .from('entries')
+        .update(updateData)
+        .eq('id', selected.id);
+
+      if (error) throw error;
+      
+      onRefresh();
+      setSelected({ ...selected, ...updateData });
+    } catch (err: any) {
+      alert("Erro ao validar: " + err.message);
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handleStartEdit = () => {
@@ -128,11 +173,21 @@ const HistoryView: React.FC<HistoryViewProps> = ({
           <button onClick={onBack} className="p-3 sm:p-4 bg-white shadow-sm border border-slate-100 rounded-xl sm:rounded-2xl hover:bg-slate-50 transition-all active:scale-95">
             <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#0A2540]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           </button>
-          <h2 className="text-3xl sm:text-4xl font-black text-[#0A2540] tracking-tight">Histórico</h2>
+          <div className="flex flex-col">
+            <h2 className="text-3xl sm:text-4xl font-black text-[#0A2540] tracking-tight">Histórico</h2>
+            {pendingCount > 0 && <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">{pendingCount} pendências encontradas</span>}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+           <button 
+              onClick={() => setOnlyPending(!onlyPending)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex items-center gap-2 ${onlyPending ? 'bg-orange-500 border-orange-500 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400 hover:border-orange-200 hover:text-orange-500'}`}
+           >
+             {onlyPending ? 'Mostrando Pendentes' : 'Filtrar Pendentes'}
+             {onlyPending && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>}
+           </button>
            <div className="bg-white p-2 rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-4 pl-4 sm:pl-5">
-              <span className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest shrink-0">Filtrar:</span>
+              <span className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest shrink-0">Data:</span>
               <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="p-2 sm:p-3 bg-slate-50 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm text-[#0A2540] border-0 outline-none w-full sm:w-auto" />
            </div>
         </div>
@@ -140,17 +195,36 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-10">
         <div className="lg:col-span-1 space-y-3 sm:space-y-4 max-h-[50vh] lg:max-h-[75vh] overflow-y-auto pr-2 hide-scrollbar bg-slate-50/50 p-4 rounded-3xl lg:p-0 lg:bg-transparent">
-          {filteredSubmissions.length > 0 ? filteredSubmissions.map(sub => (
-            <div key={sub.id} onClick={() => { setSelected(sub); setIsEditing(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`p-5 sm:p-6 rounded-2xl sm:rounded-[2.5rem] border-4 transition-all cursor-pointer active:scale-95 ${selected?.id === sub.id ? 'bg-[#0A2540] border-[#0A2540] text-white shadow-xl lg:shadow-2xl' : 'bg-white shadow-sm border-white hover:border-slate-100'}`}>
-              <div className="flex justify-between items-start mb-2 sm:mb-3">
-                <span className="font-black text-xl sm:text-2xl tracking-tighter">{sub.prefix}</span>
-                <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-full uppercase tracking-widest ${selected?.id === sub.id ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'}`}>{sub.type}</span>
+          {filteredSubmissions.length > 0 ? filteredSubmissions.map(sub => {
+            const opPending = !sub.operation_checked;
+            const manPending = !sub.maintenance_checked;
+            const isSelected = selected?.id === sub.id;
+
+            return (
+              <div key={sub.id} onClick={() => { setSelected(sub); setIsEditing(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`group p-5 sm:p-6 rounded-2xl sm:rounded-[2.5rem] border-4 transition-all cursor-pointer active:scale-95 relative overflow-hidden ${isSelected ? 'bg-[#0A2540] border-[#0A2540] text-white shadow-xl lg:shadow-2xl' : 'bg-white shadow-sm border-white hover:border-slate-100'}`}>
+                
+                {/* Indicadores de Pendência Estilo "LED" */}
+                <div className="absolute top-0 right-0 flex">
+                  {opPending && <div className="w-3 h-3 bg-orange-500 rounded-bl-xl shadow-[0_0_10px_rgba(249,115,22,0.5)] animate-pulse" title="Pendente Operação"></div>}
+                  {manPending && <div className="w-3 h-3 bg-red-600 rounded-bl-xl shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-pulse" title="Pendente Manutenção"></div>}
+                </div>
+
+                <div className="flex justify-between items-start mb-2 sm:mb-3">
+                  <span className="font-black text-xl sm:text-2xl tracking-tighter">{sub.prefix}</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-full uppercase tracking-widest ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'}`}>{sub.type}</span>
+                    <div className="flex gap-1 mt-1">
+                      <div className={`w-1.5 h-1.5 rounded-full ${opPending ? 'bg-orange-500' : 'bg-green-500 opacity-30'}`}></div>
+                      <div className={`w-1.5 h-1.5 rounded-full ${manPending ? 'bg-red-600' : 'bg-green-500 opacity-30'}`}></div>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold opacity-70 uppercase tracking-widest">{formatDateDisplay(sub.date)} às {formatTime(sub.created_at)}</p>
               </div>
-              <p className="text-[10px] sm:text-xs font-bold opacity-70 uppercase tracking-widest">{formatDateDisplay(sub.date)} às {formatTime(sub.created_at)}</p>
-            </div>
-          )) : (
+            );
+          }) : (
             <div className="text-center p-10 bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
-               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhum registro</p>
+               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhum registro encontrado</p>
             </div>
           )}
         </div>
@@ -177,7 +251,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                 {(user.role === 'OPERACAO' || user.role === 'ADMIN') && !isEditing && (
                   <button onClick={handleStartEdit} className="w-full sm:w-auto bg-[#1E90FF]/10 text-[#1E90FF] px-5 sm:px-6 py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#1E90FF] hover:text-white transition-all active:scale-95">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                    Editar
+                    Revisar Checklist
                   </button>
                 )}
               </div>
@@ -185,6 +259,10 @@ const HistoryView: React.FC<HistoryViewProps> = ({
               {isEditing ? (
                 <div className="space-y-6 sm:space-y-8">
                   <div className="bg-[#1E90FF]/5 p-5 sm:p-8 rounded-[2rem] sm:rounded-[3rem] border-2 border-[#1E90FF]/10">
+                    <div className="flex justify-between items-center mb-6">
+                      <h4 className="text-xs font-black text-[#1E90FF] uppercase tracking-widest">Revisão de Itens</h4>
+                      <span className="text-[9px] font-bold text-slate-400">Clique no status para alterar</span>
+                    </div>
                     <div className="space-y-4 max-h-[400px] sm:max-h-[450px] overflow-y-auto pr-2 sm:pr-3 hide-scrollbar">
                       {Object.entries(selected.items).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([id, data]: [string, any]) => (
                         <div key={id} className="flex flex-col gap-3 p-4 bg-white rounded-2xl sm:rounded-3xl border border-blue-50">
@@ -211,13 +289,13 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Observações Gerais</label>
-                    <textarea value={editObs} onChange={e => setEditObs(e.target.value)} className="w-full p-5 sm:p-6 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] sm:rounded-[2.5rem] text-xs sm:text-sm font-bold text-slate-950 outline-none h-24 sm:h-28 focus:bg-white focus:border-[#1E90FF] transition-all" placeholder="Justificativa da alteração ou observação geral..." />
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Justificativa da Alteração</label>
+                    <textarea value={editObs} onChange={e => setEditObs(e.target.value)} className="w-full p-5 sm:p-6 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] sm:rounded-[2.5rem] text-xs sm:text-sm font-bold text-slate-950 outline-none h-24 sm:h-28 focus:bg-white focus:border-[#1E90FF] transition-all" placeholder="Informe o motivo da alteração ou validação..." />
                   </div>
                   <div className="flex gap-3 sm:gap-4">
                     <button onClick={() => setIsEditing(false)} className="flex-1 py-4 sm:py-5 bg-slate-100 text-slate-500 rounded-2xl sm:rounded-3xl font-black text-[10px] uppercase tracking-widest active:scale-95">Descartar</button>
                     <button onClick={handleSaveEdit} disabled={isSaving} className="flex-1 py-4 sm:py-5 bg-[#58CC02] text-white rounded-2xl sm:rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95">
-                      {isSaving ? 'Salvando...' : 'Salvar'}
+                      {isSaving ? 'Salvando...' : 'Salvar Alteração'}
                     </button>
                   </div>
                 </div>
@@ -269,7 +347,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                             {selected.general_observations}
                           </p>
                         ) : (
-                          <p className="text-xs font-bold text-slate-300 italic">Nenhuma observação geral registrada para esta vistoria.</p>
+                          <p className="text-xs font-bold text-slate-300 italic">Nenhuma observação geral registrada.</p>
                         )}
                      </div>
                   </div>
@@ -277,7 +355,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                   <div className="space-y-6 pt-8 sm:pt-10 border-t border-slate-50">
                      <h4 className="font-black text-[#0A2540] text-lg sm:text-xl uppercase tracking-tight flex items-center gap-2 sm:gap-3">
                         <div className="w-1.5 h-6 sm:w-2 sm:h-6 bg-[#58CC02] rounded-full"></div>
-                        Vistos de Segurança
+                        Vistos de Segurança e Validação
                      </h4>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                        <div className="p-5 sm:p-6 bg-[#0A2540] text-white rounded-[1.8rem] sm:rounded-[2.5rem] text-center shadow-lg">
@@ -285,15 +363,47 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                           <p className="font-black truncate text-xs sm:text-sm">{selected.driver_name}</p>
                           <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] bg-[#58CC02] text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest">CONFIRMADO</span>
                        </div>
-                       <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.operation_checked ? 'bg-orange-50 border-orange-100' : 'bg-slate-50 border-dashed border-slate-200 opacity-60'}`}>
-                          <p className="text-[8px] sm:text-[9px] font-black text-orange-600 uppercase tracking-widest mb-1 sm:mb-2">Operação</p>
-                          <p className="font-black text-[#0A2540] truncate text-[11px] sm:text-xs">{getSignatureDisplay(selected, 'operation')}</p>
-                          <span className={`mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest ${selected.operation_checked ? 'bg-orange-500 text-white shadow-md' : 'bg-slate-300 text-white'}`}>{selected.operation_checked ? 'VALIDADO' : 'PENDENTE'}</span>
+                       
+                       {/* Assinatura Operação */}
+                       <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.operation_checked ? 'bg-orange-50 border-orange-100' : 'bg-orange-500 border-orange-500 text-white shadow-xl shadow-orange-200 animate-pulse'}`}>
+                          <p className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-1 sm:mb-2 ${selected.operation_checked ? 'text-orange-600' : 'text-white/80'}`}>Operação (Faltas)</p>
+                          <p className="font-black truncate text-[11px] sm:text-xs">{getSignatureDisplay(selected, 'operation')}</p>
+                          {selected.operation_checked ? (
+                             <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-orange-500 text-white shadow-md">VALIDADO</span>
+                          ) : (
+                             (user.role === 'OPERACAO' || user.role === 'ADMIN') ? (
+                               <button 
+                                onClick={() => handleQuickValidate('operation')}
+                                disabled={isValidating}
+                                className="mt-2.5 sm:mt-3 w-full bg-white text-orange-600 px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg active:scale-95 transition-all hover:bg-orange-50"
+                               >
+                                 {isValidating ? '...' : 'ASSINAR AGORA'}
+                               </button>
+                             ) : (
+                               <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-white text-orange-600">PENDENTE</span>
+                             )
+                          )}
                        </div>
-                       <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.maintenance_checked ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-dashed border-slate-200 opacity-60'}`}>
-                          <p className="text-[8px] sm:text-[9px] font-black text-red-600 uppercase tracking-widest mb-1 sm:mb-2">Manutenção</p>
-                          <p className="font-black text-[#0A2540] truncate text-[11px] sm:text-xs">{getSignatureDisplay(selected, 'maintenance')}</p>
-                          <span className={`mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest ${selected.maintenance_checked ? 'bg-red-600 text-white shadow-md' : 'bg-slate-300 text-white'}`}>{selected.maintenance_checked ? 'VALIDADO' : 'PENDENTE'}</span>
+
+                       {/* Assinatura Manutenção */}
+                       <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.maintenance_checked ? 'bg-red-50 border-red-100' : 'bg-red-600 border-red-600 text-white shadow-xl shadow-red-200 animate-pulse'}`}>
+                          <p className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-1 sm:mb-2 ${selected.maintenance_checked ? 'text-red-600' : 'text-white/80'}`}>Manutenção (Defeitos)</p>
+                          <p className="font-black truncate text-[11px] sm:text-xs">{getSignatureDisplay(selected, 'maintenance')}</p>
+                          {selected.maintenance_checked ? (
+                             <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-red-600 text-white shadow-md">VALIDADO</span>
+                          ) : (
+                             (user.role === 'MANUTENCAO' || user.role === 'ADMIN') ? (
+                               <button 
+                                onClick={() => handleQuickValidate('maintenance')}
+                                disabled={isValidating}
+                                className="mt-2.5 sm:mt-3 w-full bg-white text-red-600 px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg active:scale-95 transition-all hover:bg-red-50"
+                               >
+                                 {isValidating ? '...' : 'ASSINAR AGORA'}
+                               </button>
+                             ) : (
+                               <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-white text-red-600">PENDENTE</span>
+                             )
+                          )}
                        </div>
                      </div>
                   </div>
@@ -305,7 +415,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                 <div className="w-16 h-16 sm:w-24 sm:h-24 bg-slate-50 rounded-full flex items-center justify-center">
                     <svg className="w-8 h-8 sm:w-12 sm:h-12 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>
                 </div>
-                <p className="font-black uppercase tracking-[0.3em] text-[9px] sm:text-[10px] leading-relaxed">Selecione um checklist para exibir os detalhes da inspeção</p>
+                <p className="font-black uppercase tracking-[0.3em] text-[9px] sm:text-[10px] leading-relaxed">Selecione um checklist para exibir os detalhes da inspeção e realizar assinaturas pendentes</p>
             </div>
           )}
         </div>
