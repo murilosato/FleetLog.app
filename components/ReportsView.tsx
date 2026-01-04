@@ -9,7 +9,7 @@ interface ReportsViewProps {
 }
 
 const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => {
-  const [reportType, setReportType] = useState<'checklists' | 'fuels' | 'lubricants' | 'maintenance'>('checklists');
+  const [reportType, setReportType] = useState<'checklists' | 'fuels' | 'lubricants' | 'maintenance' | 'pauses'>('checklists');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
@@ -24,6 +24,13 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
   const showNoDataAlert = () => {
     setNoDataMessage("Nenhum registro encontrado para o período e tipo selecionado.");
     setTimeout(() => setNoDataMessage(null), 5000);
+  };
+
+  const formatDurationCSV = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const exportChecklists = async () => {
@@ -180,17 +187,12 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         return;
       }
 
-      const headers = ['Data Início', 'Hora Início', 'Data Fim', 'Hora Fim', 'Prefixo', 'Motivo', 'Tempo Efetivo (Seg)', 'Tempo Efetivo (Formatado)', 'Técnico', 'Status'];
+      const headers = ['ID_SESSAO', 'Data Início', 'Hora Início', 'Data Fim', 'Hora Fim', 'Prefixo', 'Motivo Abertura', 'Tempo Efetivo (Seg)', 'Tempo Efetivo (Formatado)', 'Técnico', 'Status'];
       const rows = data.map((d: any) => {
         const start = new Date(d.start_time);
         const end = d.end_time ? new Date(d.end_time) : null;
-        
-        const h = Math.floor(d.total_effective_seconds / 3600);
-        const m = Math.floor((d.total_effective_seconds % 3600) / 60);
-        const s = d.total_effective_seconds % 60;
-        const formatted = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-
         return [
+          d.id,
           start.toLocaleDateString('pt-BR'),
           start.toLocaleTimeString('pt-BR'),
           end ? end.toLocaleDateString('pt-BR') : '-',
@@ -198,7 +200,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
           d.prefix,
           d.opening_reason.replace(/(\r\n|\n|\r|")/gm, " "),
           d.total_effective_seconds.toString(),
-          formatted,
+          formatDurationCSV(d.total_effective_seconds),
           d.user_name,
           d.status
         ];
@@ -207,6 +209,63 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
       downloadCSV(`Relatorio_Manutencao_${startDate}_${endDate}`, headers, rows);
     } catch (err: any) {
       alert("Erro ao exportar: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportPauses = async () => {
+    setLoading(true);
+    setNoDataMessage(null);
+    try {
+      // Busca sessões no período
+      const { data: sessions, error: sError } = await supabase
+        .from('maintenance_sessions')
+        .select('id, prefix')
+        .gte('start_time', `${startDate}T00:00:00`)
+        .lte('start_time', `${endDate}T23:59:59`);
+
+      if (sError) throw sError;
+      if (!sessions || sessions.length === 0) {
+        showNoDataAlert();
+        return;
+      }
+
+      const sessionIds = sessions.map(s => s.id);
+      const { data: pauses, error: pError } = await supabase
+        .from('maintenance_pauses')
+        .select('*')
+        .in('session_id', sessionIds)
+        .order('pause_start', { ascending: true });
+
+      if (pError) throw pError;
+      if (!pauses || pauses.length === 0) {
+        alert("Sessões encontradas, mas nenhuma pausa registrada neste período.");
+        setLoading(false);
+        return;
+      }
+
+      const headers = ['ID_SESSAO', 'Prefixo_Veiculo', 'Motivo_Pausa', 'Início_Pausa', 'Fim_Pausa', 'Duração_(Seg)', 'Duração_(Formatado)'];
+      const rows = pauses.map((p: any) => {
+        const session = sessions.find(s => s.id === p.session_id);
+        const pStart = new Date(p.pause_start);
+        const pEnd = p.pause_end ? new Date(p.pause_end) : null;
+        const durationSec = pEnd ? Math.floor((pEnd.getTime() - pStart.getTime()) / 1000) : 0;
+        
+        return [
+          p.session_id,
+          session?.prefix || '?',
+          p.reason,
+          pStart.toLocaleString('pt-BR'),
+          pEnd ? pEnd.toLocaleString('pt-BR') : 'EM CURSO',
+          durationSec.toString(),
+          formatDurationCSV(durationSec)
+        ];
+      });
+
+      downloadCSV(`Relatorio_Pausas_Oficina_${startDate}_${endDate}`, headers, rows);
+    } catch (err: any) {
+      alert("Erro ao exportar pausas: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -236,7 +295,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
     if (reportType === 'checklists') exportChecklists();
     else if (reportType === 'fuels') exportFuels();
     else if (reportType === 'lubricants') exportLubricants();
-    else exportMaintenance();
+    else if (reportType === 'maintenance') exportMaintenance();
+    else if (reportType === 'pauses') exportPauses();
   };
 
   return (
@@ -251,33 +311,21 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-10">
         <div className="space-y-4">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">1. Selecione o Tipo de Dados</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button 
-              onClick={() => { setReportType('checklists'); setNoDataMessage(null); }}
-              className={`p-5 rounded-2xl border-2 transition-all text-left ${reportType === 'checklists' ? 'border-[#1E90FF] bg-blue-50/30' : 'border-slate-50 bg-slate-50/50'}`}
-            >
-              <p className="font-black text-[10px] text-[#0A2540] uppercase">Checklists</p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <button onClick={() => { setReportType('checklists'); setNoDataMessage(null); }} className={`p-4 rounded-2xl border-2 transition-all text-center ${reportType === 'checklists' ? 'border-[#1E90FF] bg-blue-50/30' : 'border-slate-50 bg-slate-50/50'}`}>
+              <p className="font-black text-[9px] text-[#0A2540] uppercase">Checklists</p>
             </button>
-
-            <button 
-              onClick={() => { setReportType('fuels'); setNoDataMessage(null); }}
-              className={`p-5 rounded-2xl border-2 transition-all text-left ${reportType === 'fuels' ? 'border-[#58CC02] bg-green-50/30' : 'border-slate-50 bg-slate-50/50'}`}
-            >
-              <p className="font-black text-[10px] text-[#0A2540] uppercase">Abastecimento</p>
+            <button onClick={() => { setReportType('fuels'); setNoDataMessage(null); }} className={`p-4 rounded-2xl border-2 transition-all text-center ${reportType === 'fuels' ? 'border-[#58CC02] bg-green-50/30' : 'border-slate-50 bg-slate-50/50'}`}>
+              <p className="font-black text-[9px] text-[#0A2540] uppercase">Abast.</p>
             </button>
-
-            <button 
-              onClick={() => { setReportType('lubricants'); setNoDataMessage(null); }}
-              className={`p-5 rounded-2xl border-2 transition-all text-left ${reportType === 'lubricants' ? 'border-[#FFA500] bg-orange-50/30' : 'border-slate-50 bg-slate-50/50'}`}
-            >
-              <p className="font-black text-[10px] text-[#0A2540] uppercase">Lubrificante</p>
+            <button onClick={() => { setReportType('lubricants'); setNoDataMessage(null); }} className={`p-4 rounded-2xl border-2 transition-all text-center ${reportType === 'lubricants' ? 'border-[#FFA500] bg-orange-50/30' : 'border-slate-50 bg-slate-50/50'}`}>
+              <p className="font-black text-[9px] text-[#0A2540] uppercase">Lubrif.</p>
             </button>
-
-            <button 
-              onClick={() => { setReportType('maintenance'); setNoDataMessage(null); }}
-              className={`p-5 rounded-2xl border-2 transition-all text-left ${reportType === 'maintenance' ? 'border-red-600 bg-red-50/30' : 'border-slate-50 bg-slate-50/50'}`}
-            >
-              <p className="font-black text-[10px] text-[#0A2540] uppercase">Manutenção</p>
+            <button onClick={() => { setReportType('maintenance'); setNoDataMessage(null); }} className={`p-4 rounded-2xl border-2 transition-all text-center ${reportType === 'maintenance' ? 'border-red-600 bg-red-50/30' : 'border-slate-50 bg-slate-50/50'}`}>
+              <p className="font-black text-[9px] text-[#0A2540] uppercase">Manut.</p>
+            </button>
+            <button onClick={() => { setReportType('pauses'); setNoDataMessage(null); }} className={`p-4 rounded-2xl border-2 transition-all text-center ${reportType === 'pauses' ? 'border-orange-500 bg-orange-50' : 'border-slate-50 bg-slate-50/50'}`}>
+              <p className="font-black text-[9px] text-orange-600 uppercase">Pausas</p>
             </button>
           </div>
         </div>
@@ -306,24 +354,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         )}
 
         <div className="pt-6 border-t border-slate-50">
-          <button 
-            onClick={handleExport}
-            disabled={loading}
-            className={`w-full py-5 rounded-2xl text-white font-black text-xs uppercase tracking-[0.3em] shadow-xl flex items-center justify-center gap-4 transition-all active:scale-[0.98] ${loading ? 'bg-slate-300 cursor-not-allowed' : 'bg-[#0A2540] hover:bg-[#1E90FF]'}`}
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                Processando...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Gerar e Baixar CSV
-              </>
-            )}
+          <button onClick={handleExport} disabled={loading} className={`w-full py-5 rounded-2xl text-white font-black text-xs uppercase tracking-[0.3em] shadow-xl flex items-center justify-center gap-4 transition-all active:scale-[0.98] ${loading ? 'bg-slate-300 cursor-not-allowed' : 'bg-[#0A2540] hover:bg-[#1E90FF]'}`}>
+            {loading ? 'Processando...' : `Baixar Relatório ${reportType === 'pauses' ? 'de Pausas' : ''}`}
           </button>
-          <p className="text-center text-[9px] font-bold text-slate-300 uppercase mt-4 tracking-widest">O arquivo será baixado automaticamente em formato .csv (Excel)</p>
         </div>
       </div>
     </div>
