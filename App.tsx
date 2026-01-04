@@ -6,17 +6,19 @@ import Dashboard from './components/Dashboard';
 import ChecklistForm from './components/ChecklistForm';
 import RefuelingForm from './components/RefuelingForm';
 import LubricantForm from './components/LubricantForm';
+import MaintenanceTimer from './components/MaintenanceTimer';
 import HistoryView from './components/HistoryView';
 import RecordsHistoryView from './components/RecordsHistoryView';
 import HistoryPortal from './components/HistoryPortal';
 import AdminPanel from './components/AdminPanel';
 import ReportsView from './components/ReportsView';
 import { supabase } from './lib/supabase';
-import { saveOfflineEntry, getOfflineEntries, markEntryAsSynced, saveMetadata, getMetadata } from './lib/db';
+import { saveOfflineEntry, saveMetadata, getMetadata } from './lib/db';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<'dashboard' | 'form' | 'refueling' | 'lubricant' | 'history_portal' | 'history_checklists' | 'history_records' | 'admin' | 'reports'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'form' | 'refueling' | 'lubricant' | 'maintenance_timer' | 'history_portal' | 'history_checklists' | 'history_records' | 'admin' | 'reports'>('dashboard');
+  const [selectedMaintId, setSelectedMaintId] = useState<string | null>(null);
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
   const [refuelingEntries, setRefuelingEntries] = useState<RefuelingEntry[]>([]);
   const [lubricantEntries, setLubricantEntries] = useState<LubricantEntry[]>([]);
@@ -25,8 +27,6 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  const syncingRef = useRef(false);
-
   const fetchData = useCallback(async () => {
     if (!navigator.onLine) return;
     try {
@@ -133,7 +133,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-[#020617] text-white shadow-lg sticky top-0 z-50 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => setView('dashboard')}>
+          <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => { setView('dashboard'); setSelectedMaintId(null); }}>
             <div className="relative w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center font-tech font-black text-cyan-400 text-base sm:text-lg overflow-hidden">
                 FL
             </div>
@@ -143,13 +143,13 @@ const App: React.FC = () => {
           </div>
           
           <nav className="flex items-center gap-1 sm:gap-2 mx-4 overflow-x-auto hide-scrollbar">
-            <button onClick={() => setView('dashboard')} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all whitespace-nowrap ${view === 'dashboard' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Painel</button>
-            <button onClick={() => setView('history_portal')} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view.includes('history') ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Log</button>
+            <button onClick={() => { setView('dashboard'); setSelectedMaintId(null); }} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all whitespace-nowrap ${view === 'dashboard' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Painel</button>
+            <button onClick={() => { setView('history_portal'); setSelectedMaintId(null); }} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view.includes('history') ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Log</button>
             {showReports && (
-              <button onClick={() => setView('reports')} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view === 'reports' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Analytics</button>
+              <button onClick={() => { setView('reports'); setSelectedMaintId(null); }} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view === 'reports' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Analytics</button>
             )}
             {user.role === 'ADMIN' && (
-              <button onClick={() => setView('admin')} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view === 'admin' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Gestão</button>
+              <button onClick={() => { setView('admin'); setSelectedMaintId(null); }} className={`px-3 py-2 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all ${view === 'admin' ? 'bg-cyan-500 text-slate-950' : 'opacity-60 hover:opacity-100'}`}>Gestão</button>
             )}
           </nav>
 
@@ -176,6 +176,7 @@ const App: React.FC = () => {
             onNewChecklist={() => setView('form')} 
             onNewRefueling={() => setView('refueling')}
             onNewLubricant={() => setView('lubricant')}
+            onMaintenanceTimer={() => { setView('maintenance_timer'); setSelectedMaintId(null); }}
             onViewHistory={() => setView('history_portal')}
             onRefresh={fetchData}
             aiSummary={null}
@@ -186,9 +187,22 @@ const App: React.FC = () => {
         {view === 'form' && <ChecklistForm user={user} vehicles={vehicles} availableItems={checklistItems} onSubmit={handleSubmitEntry} onCancel={() => setView('dashboard')} />}
         {view === 'refueling' && <RefuelingForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); initAppData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
         {view === 'lubricant' && <LubricantForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); initAppData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
+        {view === 'maintenance_timer' && (
+          <MaintenanceTimer 
+            user={user} 
+            vehicles={vehicles} 
+            initialSessionId={selectedMaintId}
+            onBack={() => { setView('dashboard'); setSelectedMaintId(null); }} 
+          />
+        )}
         {view === 'history_portal' && <HistoryPortal onSelectChecklists={() => setView('history_checklists')} onSelectRecords={() => setView('history_records')} onBack={() => setView('dashboard')} />}
         {view === 'history_checklists' && <HistoryView submissions={entries} user={user} users={users} availableItems={checklistItems} onBack={() => setView('history_portal')} onRefresh={fetchData} />}
-        {view === 'history_records' && <RecordsHistoryView onBack={() => setView('history_portal')} />}
+        {view === 'history_records' && (
+          <RecordsHistoryView 
+            onBack={() => setView('history_portal')} 
+            onOpenMaintenance={(id) => { setSelectedMaintId(id); setView('maintenance_timer'); }}
+          />
+        )}
         {view === 'admin' && <AdminPanel vehicles={vehicles} items={checklistItems} onRefresh={initAppData} onBack={() => setView('dashboard')} />}
         {view === 'reports' && <ReportsView availableItems={checklistItems} onBack={() => setView('dashboard')} />}
       </main>

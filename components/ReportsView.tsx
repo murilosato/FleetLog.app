@@ -9,7 +9,7 @@ interface ReportsViewProps {
 }
 
 const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => {
-  const [reportType, setReportType] = useState<'checklists' | 'fuels' | 'lubricants'>('checklists');
+  const [reportType, setReportType] = useState<'checklists' | 'fuels' | 'lubricants' | 'maintenance'>('checklists');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
@@ -69,9 +69,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
         const itemData: string[] = [];
         itemsToExport.forEach(item => {
-          // Busca robusta pela chave (string ou number)
           const sItem = s.items ? (s.items[item.id.toString()] || s.items[item.id]) : null;
-          
           if (sItem) {
             itemData.push(sItem.status || 'OK');
             itemData.push((sItem.observations || '').replace(/(\r\n|\n|\r|")/gm, " "));
@@ -165,14 +163,61 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
     }
   };
 
+  const exportMaintenance = async () => {
+    setLoading(true);
+    setNoDataMessage(null);
+    try {
+      const { data, error } = await supabase
+        .from('maintenance_history_view')
+        .select('*')
+        .gte('start_time', `${startDate}T00:00:00`)
+        .lte('start_time', `${endDate}T23:59:59`)
+        .order('start_time', { ascending: false });
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        showNoDataAlert();
+        return;
+      }
+
+      const headers = ['Data Início', 'Hora Início', 'Data Fim', 'Hora Fim', 'Prefixo', 'Motivo', 'Tempo Efetivo (Seg)', 'Tempo Efetivo (Formatado)', 'Técnico', 'Status'];
+      const rows = data.map((d: any) => {
+        const start = new Date(d.start_time);
+        const end = d.end_time ? new Date(d.end_time) : null;
+        
+        const h = Math.floor(d.total_effective_seconds / 3600);
+        const m = Math.floor((d.total_effective_seconds % 3600) / 60);
+        const s = d.total_effective_seconds % 60;
+        const formatted = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+        return [
+          start.toLocaleDateString('pt-BR'),
+          start.toLocaleTimeString('pt-BR'),
+          end ? end.toLocaleDateString('pt-BR') : '-',
+          end ? end.toLocaleTimeString('pt-BR') : '-',
+          d.prefix,
+          d.opening_reason.replace(/(\r\n|\n|\r|")/gm, " "),
+          d.total_effective_seconds.toString(),
+          formatted,
+          d.user_name,
+          d.status
+        ];
+      });
+
+      downloadCSV(`Relatorio_Manutencao_${startDate}_${endDate}`, headers, rows);
+    } catch (err: any) {
+      alert("Erro ao exportar: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
-    // Usando ponto e vírgula (;) como separador padrão para Excel em Português (Brasil)
     const separator = ';';
     const csvContent = [
       headers.join(separator),
       ...rows.map(row => row.map(cell => {
         const str = cell ? cell.toString() : '';
-        // Escapa aspas duplas e envolve o conteúdo em aspas se necessário
         return `"${str.replace(/"/g, '""')}"`;
       }).join(separator))
     ].join('\n');
@@ -190,7 +235,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
   const handleExport = () => {
     if (reportType === 'checklists') exportChecklists();
     else if (reportType === 'fuels') exportFuels();
-    else exportLubricants();
+    else if (reportType === 'lubricants') exportLubricants();
+    else exportMaintenance();
   };
 
   return (
@@ -205,38 +251,33 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-10">
         <div className="space-y-4">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">1. Selecione o Tipo de Dados</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button 
               onClick={() => { setReportType('checklists'); setNoDataMessage(null); }}
-              className={`p-6 rounded-2xl border-2 transition-all text-left ${reportType === 'checklists' ? 'border-[#1E90FF] bg-blue-50/30 shadow-lg shadow-blue-50' : 'border-slate-50 bg-slate-50/50 hover:bg-white hover:border-slate-200'}`}
+              className={`p-5 rounded-2xl border-2 transition-all text-left ${reportType === 'checklists' ? 'border-[#1E90FF] bg-blue-50/30' : 'border-slate-50 bg-slate-50/50'}`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${reportType === 'checklists' ? 'bg-[#1E90FF] text-white' : 'bg-slate-100 text-slate-400'}`}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-              </div>
-              <p className="font-black text-sm text-[#0A2540]">Checklists</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Vistorias da Frota</p>
+              <p className="font-black text-[10px] text-[#0A2540] uppercase">Checklists</p>
             </button>
 
             <button 
               onClick={() => { setReportType('fuels'); setNoDataMessage(null); }}
-              className={`p-6 rounded-2xl border-2 transition-all text-left ${reportType === 'fuels' ? 'border-[#58CC02] bg-green-50/30 shadow-lg shadow-green-50' : 'border-slate-50 bg-slate-50/50 hover:bg-white hover:border-slate-200'}`}
+              className={`p-5 rounded-2xl border-2 transition-all text-left ${reportType === 'fuels' ? 'border-[#58CC02] bg-green-50/30' : 'border-slate-50 bg-slate-50/50'}`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${reportType === 'fuels' ? 'bg-[#58CC02] text-white' : 'bg-slate-100 text-slate-400'}`}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              </div>
-              <p className="font-black text-sm text-[#0A2540]">Abastecimentos</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Diesel e ARLA</p>
+              <p className="font-black text-[10px] text-[#0A2540] uppercase">Abastecimento</p>
             </button>
 
             <button 
               onClick={() => { setReportType('lubricants'); setNoDataMessage(null); }}
-              className={`p-6 rounded-2xl border-2 transition-all text-left ${reportType === 'lubricants' ? 'border-[#FFA500] bg-orange-50/30 shadow-lg shadow-orange-50' : 'border-slate-50 bg-slate-50/50 hover:bg-white hover:border-slate-200'}`}
+              className={`p-5 rounded-2xl border-2 transition-all text-left ${reportType === 'lubricants' ? 'border-[#FFA500] bg-orange-50/30' : 'border-slate-50 bg-slate-50/50'}`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${reportType === 'lubricants' ? 'bg-[#FFA500] text-white' : 'bg-slate-100 text-slate-400'}`}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-              </div>
-              <p className="font-black text-sm text-[#0A2540]">Lubrificantes</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Óleos e Graxas</p>
+              <p className="font-black text-[10px] text-[#0A2540] uppercase">Lubrificante</p>
+            </button>
+
+            <button 
+              onClick={() => { setReportType('maintenance'); setNoDataMessage(null); }}
+              className={`p-5 rounded-2xl border-2 transition-all text-left ${reportType === 'maintenance' ? 'border-red-600 bg-red-50/30' : 'border-slate-50 bg-slate-50/50'}`}
+            >
+              <p className="font-black text-[10px] text-[#0A2540] uppercase">Manutenção</p>
             </button>
           </div>
         </div>

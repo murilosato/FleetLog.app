@@ -11,6 +11,7 @@ interface DashboardProps {
   onNewChecklist: () => void;
   onNewRefueling: () => void;
   onNewLubricant: () => void;
+  onMaintenanceTimer: () => void;
   onViewHistory: () => void;
   onRefresh: () => void;
   aiSummary: string | null;
@@ -26,6 +27,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onNewChecklist, 
   onNewRefueling,
   onNewLubricant,
+  onMaintenanceTimer,
   onViewHistory
 }) => {
   const [dashboardDate, setDashboardDate] = useState(new Date().toISOString().split('T')[0]);
@@ -36,7 +38,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     return `${day}/${month}/${year}`;
   };
 
-  // Filtros de hoje baseados na data selecionada
   const dailyChecklists = useMemo(() => 
     submissions.filter(s => s.date === dashboardDate), 
     [submissions, dashboardDate]
@@ -68,10 +69,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     return "Boa noite";
   };
 
+  const canAccessMaintenance = user.role === 'ADMIN' || user.role === 'MANUTENCAO';
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
       
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2 mb-1">
@@ -94,57 +96,53 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Grid de Ações Simétricas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
-        {/* Novo Checklist */}
-        <button 
-          onClick={onNewChecklist}
-          className="bg-[#0A2540] p-6 rounded-3xl text-white shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 group"
-        >
+      <div className={`grid grid-cols-1 md:grid-cols-${canAccessMaintenance ? '4' : '3'} gap-4`}>
+        <button onClick={onNewChecklist} className="bg-[#0A2540] p-6 rounded-3xl text-white shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 group">
           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 group-hover:scale-110 transition-transform">
-             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-black uppercase tracking-widest">Novo Checklist</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest">Checklist</h3>
             <p className="text-[10px] font-bold text-blue-300 opacity-80">Iniciar Vistoria</p>
           </div>
         </button>
 
-        {/* Novo Abastecimento */}
-        <button 
-          onClick={onNewRefueling}
-          className="bg-[#58CC02] p-6 rounded-3xl text-white shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 group"
-        >
+        <button onClick={onNewRefueling} className="bg-[#58CC02] p-6 rounded-3xl text-white shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 group">
           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 group-hover:scale-110 transition-transform">
              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-black uppercase tracking-widest">Novo Abastecimento</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest">Abastecimento</h3>
             <p className="text-[10px] font-bold text-green-100 opacity-80">Diesel e ARLA</p>
           </div>
         </button>
 
-        {/* Novo Lubrificante */}
-        <button 
-          onClick={onNewLubricant}
-          className="bg-[#FFA500] p-6 rounded-3xl text-white shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 group"
-        >
+        <button onClick={onNewLubricant} className="bg-[#FFA500] p-6 rounded-3xl text-white shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 group">
           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 group-hover:scale-110 transition-transform">
              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-black uppercase tracking-widest">Novo Lubrificante</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest">Lubrificante</h3>
             <p className="text-[10px] font-bold text-orange-50 opacity-80">Óleo e Graxa</p>
           </div>
         </button>
 
+        {canAccessMaintenance && (
+          <button onClick={onMaintenanceTimer} className="bg-red-600 p-6 rounded-3xl text-white shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8"></div>
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 group-hover:scale-110 transition-transform">
+               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-black uppercase tracking-widest">Oficina</h3>
+              <p className="text-[10px] font-bold text-red-100 opacity-80">Timer de Manutenção</p>
+            </div>
+          </button>
+        )}
+
       </div>
 
-      {/* Resumo de Hoje (Stats) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          
-          {/* Card Checklist */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
             <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0A2540]">
                <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/></svg>
@@ -155,7 +153,6 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          {/* Card Abastecimentos */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
             <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#58CC02]">
                <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/></svg>
@@ -166,7 +163,6 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          {/* Card Lubrificantes */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
             <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#FFA500]">
                <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd"/></svg>
@@ -176,15 +172,10 @@ const Dashboard: React.FC<DashboardProps> = ({
               <p className="text-2xl font-black text-[#0A2540]">{counts.lubricants}</p>
             </div>
           </div>
-
       </div>
 
-      {/* Botão de Históricos Centralizado */}
       <div className="pt-2">
-        <button 
-          onClick={onViewHistory} 
-          className="w-full px-8 py-4 bg-white border border-slate-100 text-[#0A2540] rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-3 group"
-        >
+        <button onClick={onViewHistory} className="w-full px-8 py-4 bg-white border border-slate-100 text-[#0A2540] rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-3 group">
           Acessar Histórico Completo
           <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </button>

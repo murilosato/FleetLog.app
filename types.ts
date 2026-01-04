@@ -49,6 +49,28 @@ export interface LubricantType {
   active: boolean;
 }
 
+export interface MaintenanceSession {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  prefix: string;
+  opening_reason: string;
+  start_time: string;
+  end_time?: string;
+  status: 'ACTIVE' | 'PAUSED' | 'FINISHED';
+  total_effective_seconds: number;
+  user_name?: string;
+  plate?: string;
+}
+
+export interface MaintenancePause {
+  id: string;
+  session_id: string;
+  pause_start: string;
+  pause_end?: string;
+  reason: string;
+}
+
 export interface ChecklistEntry {
   id: string;
   date: string;
