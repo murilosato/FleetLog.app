@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ChecklistEntry, ItemStatus, User, DBChecklistItem } from '../types';
 import { OFFICIAL_SOLURB_ITEMS } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -14,13 +14,13 @@ interface HistoryViewProps {
 }
 
 const HistoryView: React.FC<HistoryViewProps> = ({ 
-  submissions, 
   user, 
   users = [], 
   availableItems = [], 
   onBack, 
   onRefresh 
 }) => {
+  const [localSubmissions, setLocalSubmissions] = useState<ChecklistEntry[]>([]);
   const [selected, setSelected] = useState<ChecklistEntry | null>(null);
   const [dateFilter, setDateFilter] = useState('');
   const [onlyPending, setOnlyPending] = useState(false);
@@ -29,6 +29,34 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   const [editObs, setEditObs] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchChecklists = async () => {
+    setIsLoading(true);
+    try {
+      let query = supabase
+        .from('entries')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      // Se for operador, filtra apenas os dele diretamente no banco para performance e segurança
+      if (user.role === 'OPERADOR') {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      setLocalSubmissions((data as ChecklistEntry[]) || []);
+    } catch (err) {
+      console.error('Erro ao carregar checklists:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChecklists();
+  }, []);
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -37,18 +65,17 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   };
 
   const filteredSubmissions = useMemo(() => {
-    let list = submissions;
-    if (user.role === 'OPERADOR') list = list.filter(s => s.user_id === user.id);
+    let list = localSubmissions;
     if (dateFilter) list = list.filter(s => s.date === dateFilter);
     if (onlyPending) {
       list = list.filter(s => !s.operation_checked || !s.maintenance_checked);
     }
     return list;
-  }, [submissions, user, dateFilter, onlyPending]);
+  }, [localSubmissions, dateFilter, onlyPending]);
 
   const pendingCount = useMemo(() => {
-    return submissions.filter(s => !s.operation_checked || !s.maintenance_checked).length;
-  }, [submissions]);
+    return localSubmissions.filter(s => !s.operation_checked || !s.maintenance_checked).length;
+  }, [localSubmissions]);
 
   const formatTime = (ts: number) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -86,7 +113,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   };
 
   const handleQuickValidate = async (field: 'operation' | 'maintenance') => {
-    if (!selected || !onRefresh) return;
+    if (!selected) return;
     
     const confirmMsg = field === 'operation' 
       ? "Confirmar assinatura da Operação para este checklist?" 
@@ -112,8 +139,9 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
       if (error) throw error;
       
-      onRefresh();
+      await fetchChecklists();
       setSelected({ ...selected, ...updateData });
+      if (onRefresh) onRefresh();
     } catch (err: any) {
       alert("Erro ao validar: " + err.message);
     } finally {
@@ -129,7 +157,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   };
 
   const handleSaveEdit = async () => {
-    if (!selected || !onRefresh) return;
+    if (!selected) return;
     const hasChanged = JSON.stringify(editItems) !== JSON.stringify(selected.items);
     if (hasChanged && !editObs.trim()) {
       alert("Atenção: Justifique a alteração no campo de observações.");
@@ -157,8 +185,9 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       if (error) throw error;
       
       setIsEditing(false);
-      onRefresh();
+      await fetchChecklists();
       setSelected({ ...selected, items: editItems, general_observations: editObs });
+      if (onRefresh) onRefresh();
     } catch (err: any) {
       alert("Erro ao salvar: " + err.message);
     } finally {
@@ -195,15 +224,19 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-10">
         <div className="lg:col-span-1 space-y-3 sm:space-y-4 max-h-[50vh] lg:max-h-[75vh] overflow-y-auto pr-2 hide-scrollbar bg-slate-50/50 p-4 rounded-3xl lg:p-0 lg:bg-transparent">
-          {filteredSubmissions.length > 0 ? filteredSubmissions.map(sub => {
+          {isLoading ? (
+            <div className="text-center p-10">
+               <svg className="animate-spin h-8 w-8 text-[#1E90FF] mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">Carregando vistorias...</p>
+            </div>
+          ) : filteredSubmissions.length > 0 ? filteredSubmissions.map(sub => {
             const opPending = !sub.operation_checked;
             const manPending = !sub.maintenance_checked;
             const isSelected = selected?.id === sub.id;
 
             return (
-              <div key={sub.id} onClick={() => { setSelected(sub); setIsEditing(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`group p-5 sm:p-6 rounded-2xl sm:rounded-[2.5rem] border-4 transition-all cursor-pointer active:scale-95 relative overflow-hidden ${isSelected ? 'bg-[#0A2540] border-[#0A2540] text-white shadow-xl lg:shadow-2xl' : 'bg-white shadow-sm border-white hover:border-slate-100'}`}>
+              <div key={sub.id} onClick={() => { setSelected(sub); setIsEditing(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`group p-5 sm:p-6 rounded-2xl sm:rounded-[2.5rem] border-4 transition-all cursor-pointer active:scale-95 relative overflow-hidden ${isSelected ? 'bg-[#0A2540] border-[#0A2540] text-white shadow-xl' : 'bg-white shadow-sm border-white hover:border-slate-100'}`}>
                 
-                {/* Indicadores de Pendência Estilo "LED" */}
                 <div className="absolute top-0 right-0 flex">
                   {opPending && <div className="w-3 h-3 bg-orange-500 rounded-bl-xl shadow-[0_0_10px_rgba(249,115,22,0.5)] animate-pulse" title="Pendente Operação"></div>}
                   {manPending && <div className="w-3 h-3 bg-red-600 rounded-bl-xl shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-pulse" title="Pendente Manutenção"></div>}
@@ -213,10 +246,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                   <span className="font-black text-xl sm:text-2xl tracking-tighter">{sub.prefix}</span>
                   <div className="flex flex-col items-end gap-1">
                     <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-full uppercase tracking-widest ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'}`}>{sub.type}</span>
-                    <div className="flex gap-1 mt-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${opPending ? 'bg-orange-500' : 'bg-green-500 opacity-30'}`}></div>
-                      <div className={`w-1.5 h-1.5 rounded-full ${manPending ? 'bg-red-600' : 'bg-green-500 opacity-30'}`}></div>
-                    </div>
                   </div>
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold opacity-70 uppercase tracking-widest">{formatDateDisplay(sub.date)} às {formatTime(sub.created_at)}</p>
@@ -319,89 +348,48 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                              <div className="flex items-center justify-between gap-3">
                                 <div className="flex flex-col flex-1 truncate pr-3">
                                    <span className={`text-[11px] sm:text-xs font-black truncate leading-tight ${data.surveyed ? 'text-slate-800' : 'text-slate-400 italic'}`}>{getItemLabel(id)}</span>
-                                   {!data.surveyed && <span className="text-[7px] uppercase font-bold text-slate-400">Não Vistoriado</span>}
                                 </div>
                                 {data.surveyed && (
                                    <span className={`text-[8px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl uppercase shrink-0 shadow-sm ${data.status === ItemStatus.OK ? 'bg-[#58CC02] text-white' : 'bg-red-600 text-white'}`}>{getStatusDisplay(data.status)}</span>
                                 )}
                              </div>
-                             {data.observations && (
-                               <div className="mt-3 p-2.5 bg-black/5 rounded-xl border border-black/5">
-                                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Observação do Item:</p>
-                                 <p className="text-[11px] font-bold text-slate-950 leading-relaxed">"{data.observations}"</p>
-                               </div>
-                             )}
                           </div>
                        ))}
-                     </div>
-                  </div>
-
-                  <div className="space-y-4 pt-4">
-                     <h4 className="font-black text-[#0A2540] text-lg sm:text-xl uppercase tracking-tight flex items-center gap-2 sm:gap-3">
-                        <div className="w-1.5 h-6 sm:w-2 sm:h-6 bg-slate-300 rounded-full"></div>
-                        Observações Gerais
-                     </h4>
-                     <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 min-h-[100px]">
-                        {selected.general_observations ? (
-                          <p className="text-sm font-bold text-slate-950 leading-relaxed">
-                            {selected.general_observations}
-                          </p>
-                        ) : (
-                          <p className="text-xs font-bold text-slate-300 italic">Nenhuma observação geral registrada.</p>
-                        )}
                      </div>
                   </div>
 
                   <div className="space-y-6 pt-8 sm:pt-10 border-t border-slate-50">
                      <h4 className="font-black text-[#0A2540] text-lg sm:text-xl uppercase tracking-tight flex items-center gap-2 sm:gap-3">
                         <div className="w-1.5 h-6 sm:w-2 sm:h-6 bg-[#58CC02] rounded-full"></div>
-                        Vistos de Segurança e Validação
+                        Vistos de Segurança
                      </h4>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                        <div className="p-5 sm:p-6 bg-[#0A2540] text-white rounded-[1.8rem] sm:rounded-[2.5rem] text-center shadow-lg">
-                          <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest opacity-60 mb-1 sm:mb-2">Motorista (Vistoriador)</p>
+                          <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest opacity-60 mb-1 sm:mb-2">Motorista</p>
                           <p className="font-black truncate text-xs sm:text-sm">{selected.driver_name}</p>
-                          <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] bg-[#58CC02] text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest">CONFIRMADO</span>
+                          <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] bg-[#58CC02] text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest">OK</span>
                        </div>
                        
-                       {/* Assinatura Operação */}
-                       <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.operation_checked ? 'bg-orange-50 border-orange-100' : 'bg-orange-500 border-orange-500 text-white shadow-xl shadow-orange-200 animate-pulse'}`}>
-                          <p className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-1 sm:mb-2 ${selected.operation_checked ? 'text-orange-600' : 'text-white/80'}`}>Operação (Faltas)</p>
+                       <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.operation_checked ? 'bg-orange-50 border-orange-100' : 'bg-orange-500 border-orange-500 text-white shadow-xl animate-pulse'}`}>
+                          <p className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-1 sm:mb-2 ${selected.operation_checked ? 'text-orange-600' : 'text-white/80'}`}>Operação</p>
                           <p className="font-black truncate text-[11px] sm:text-xs">{getSignatureDisplay(selected, 'operation')}</p>
                           {selected.operation_checked ? (
-                             <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-orange-500 text-white shadow-md">VALIDADO</span>
+                             <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-orange-500 text-white">VALIDADO</span>
                           ) : (
-                             (user.role === 'OPERACAO' || user.role === 'ADMIN') ? (
-                               <button 
-                                onClick={() => handleQuickValidate('operation')}
-                                disabled={isValidating}
-                                className="mt-2.5 sm:mt-3 w-full bg-white text-orange-600 px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg active:scale-95 transition-all hover:bg-orange-50"
-                               >
-                                 {isValidating ? '...' : 'ASSINAR AGORA'}
-                               </button>
-                             ) : (
-                               <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-white text-orange-600">PENDENTE</span>
+                             (user.role === 'OPERACAO' || user.role === 'ADMIN') && (
+                               <button onClick={() => handleQuickValidate('operation')} disabled={isValidating} className="mt-2 w-full bg-white text-orange-600 px-3 py-1 rounded-lg font-black text-[9px] uppercase tracking-widest">ASSINAR</button>
                              )
                           )}
                        </div>
 
-                       {/* Assinatura Manutenção */}
-                       <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.maintenance_checked ? 'bg-red-50 border-red-100' : 'bg-red-600 border-red-600 text-white shadow-xl shadow-red-200 animate-pulse'}`}>
-                          <p className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-1 sm:mb-2 ${selected.maintenance_checked ? 'text-red-600' : 'text-white/80'}`}>Manutenção (Defeitos)</p>
+                       <div className={`p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2.5rem] border-2 text-center transition-all ${selected.maintenance_checked ? 'bg-red-50 border-red-100' : 'bg-red-600 border-red-600 text-white shadow-xl animate-pulse'}`}>
+                          <p className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-1 sm:mb-2 ${selected.maintenance_checked ? 'text-red-600' : 'text-white/80'}`}>Oficina</p>
                           <p className="font-black truncate text-[11px] sm:text-xs">{getSignatureDisplay(selected, 'maintenance')}</p>
                           {selected.maintenance_checked ? (
-                             <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-red-600 text-white shadow-md">VALIDADO</span>
+                             <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-red-600 text-white">VALIDADO</span>
                           ) : (
-                             (user.role === 'MANUTENCAO' || user.role === 'ADMIN') ? (
-                               <button 
-                                onClick={() => handleQuickValidate('maintenance')}
-                                disabled={isValidating}
-                                className="mt-2.5 sm:mt-3 w-full bg-white text-red-600 px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg active:scale-95 transition-all hover:bg-red-50"
-                               >
-                                 {isValidating ? '...' : 'ASSINAR AGORA'}
-                               </button>
-                             ) : (
-                               <span className="mt-2.5 sm:mt-3 inline-block text-[9px] sm:text-[10px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black uppercase tracking-widest bg-white text-red-600">PENDENTE</span>
+                             (user.role === 'MANUTENCAO' || user.role === 'ADMIN') && (
+                               <button onClick={() => handleQuickValidate('maintenance')} disabled={isValidating} className="mt-2 w-full bg-white text-red-600 px-3 py-1 rounded-lg font-black text-[9px] uppercase tracking-widest">ASSINAR</button>
                              )
                           )}
                        </div>
@@ -415,7 +403,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                 <div className="w-16 h-16 sm:w-24 sm:h-24 bg-slate-50 rounded-full flex items-center justify-center">
                     <svg className="w-8 h-8 sm:w-12 sm:h-12 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>
                 </div>
-                <p className="font-black uppercase tracking-[0.3em] text-[9px] sm:text-[10px] leading-relaxed">Selecione um checklist para exibir os detalhes da inspeção e realizar assinaturas pendentes</p>
+                <p className="font-black uppercase tracking-[0.3em] text-[9px] sm:text-[10px] leading-relaxed">Selecione um checklist para exibir os detalhes da inspeção</p>
             </div>
           )}
         </div>
