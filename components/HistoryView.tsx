@@ -22,7 +22,15 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 }) => {
   const [localSubmissions, setLocalSubmissions] = useState<ChecklistEntry[]>([]);
   const [selected, setSelected] = useState<ChecklistEntry | null>(null);
-  const [dateFilter, setDateFilter] = useState('');
+  
+  // Filtros de Data - Padrão: Últimos 7 dias
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  
   const [onlyPending, setOnlyPending] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editItems, setEditItems] = useState<Record<string, any>>({});
@@ -37,9 +45,10 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       let query = supabase
         .from('entries')
         .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate)
         .order('created_at', { ascending: false });
 
-      // Se for operador, filtra apenas os dele diretamente no banco para performance e segurança
       if (user.role === 'OPERADOR') {
         query = query.eq('user_id', user.id);
       }
@@ -56,7 +65,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
   useEffect(() => {
     fetchChecklists();
-  }, []);
+  }, [startDate, endDate]);
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -66,12 +75,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
   const filteredSubmissions = useMemo(() => {
     let list = localSubmissions;
-    if (dateFilter) list = list.filter(s => s.date === dateFilter);
     if (onlyPending) {
       list = list.filter(s => !s.operation_checked || !s.maintenance_checked);
     }
     return list;
-  }, [localSubmissions, dateFilter, onlyPending]);
+  }, [localSubmissions, onlyPending]);
 
   const pendingCount = useMemo(() => {
     return localSubmissions.filter(s => !s.operation_checked || !s.maintenance_checked).length;
@@ -197,7 +205,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500 pb-20 sm:pb-0">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8 mb-6 sm:mb-10">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8 mb-6 sm:mb-10">
         <div className="flex items-center gap-4 sm:gap-6">
           <button onClick={onBack} className="p-3 sm:p-4 bg-white shadow-sm border border-slate-100 rounded-xl sm:rounded-2xl hover:bg-slate-50 transition-all active:scale-95">
             <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#0A2540]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -207,27 +215,37 @@ const HistoryView: React.FC<HistoryViewProps> = ({
             {pendingCount > 0 && <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">{pendingCount} pendências encontradas</span>}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+           {/* Filtro Pendentes */}
            <button 
               onClick={() => setOnlyPending(!onlyPending)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex items-center gap-2 ${onlyPending ? 'bg-orange-500 border-orange-500 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400 hover:border-orange-200 hover:text-orange-500'}`}
+              className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex items-center gap-2 w-full sm:w-auto justify-center ${onlyPending ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-100' : 'bg-white border-slate-100 text-slate-400 hover:border-orange-200 hover:text-orange-500'}`}
            >
              {onlyPending ? 'Mostrando Pendentes' : 'Filtrar Pendentes'}
              {onlyPending && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>}
            </button>
-           <div className="bg-white p-2 rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-4 pl-4 sm:pl-5">
-              <span className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest shrink-0">Data:</span>
-              <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="p-2 sm:p-3 bg-slate-50 rounded-lg sm:rounded-xl font-black text-xs sm:text-sm text-[#0A2540] border-0 outline-none w-full sm:w-auto" />
+
+           {/* Intervalo de Datas */}
+           <div className="bg-white p-2 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-3 px-3 py-1 w-full sm:w-auto border-b sm:border-b-0 sm:border-r border-slate-50">
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">De:</span>
+                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-1 bg-transparent font-black text-xs text-[#0A2540] border-0 outline-none w-full" />
+              </div>
+              <div className="flex items-center gap-3 px-3 py-1 w-full sm:w-auto">
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Até:</span>
+                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-1 bg-transparent font-black text-xs text-[#0A2540] border-0 outline-none w-full" />
+              </div>
            </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-10">
-        <div className="lg:col-span-1 space-y-3 sm:space-y-4 max-h-[50vh] lg:max-h-[75vh] overflow-y-auto pr-2 hide-scrollbar bg-slate-50/50 p-4 rounded-3xl lg:p-0 lg:bg-transparent">
+        <div className="lg:col-span-1 space-y-3 sm:space-y-4 max-h-[60vh] lg:max-h-[75vh] overflow-y-auto pr-2 hide-scrollbar bg-slate-50/50 p-4 rounded-3xl lg:p-0 lg:bg-transparent">
           {isLoading ? (
-            <div className="text-center p-10">
+            <div className="text-center p-10 bg-white rounded-3xl border-2 border-dashed border-slate-100">
                <svg className="animate-spin h-8 w-8 text-[#1E90FF] mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">Carregando vistorias...</p>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">Consultando banco de dados...</p>
             </div>
           ) : filteredSubmissions.length > 0 ? filteredSubmissions.map(sub => {
             const opPending = !sub.operation_checked;
@@ -252,8 +270,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({
               </div>
             );
           }) : (
-            <div className="text-center p-10 bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
-               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhum registro encontrado</p>
+            <div className="text-center p-12 bg-white rounded-[2.5rem] border-4 border-dashed border-slate-100">
+               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+               </div>
+               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhum registro no período</p>
             </div>
           )}
         </div>
