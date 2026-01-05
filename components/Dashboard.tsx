@@ -67,7 +67,9 @@ const Dashboard: React.FC<DashboardProps> = ({
       refuelings: isOperador ? dailyRefuelings.filter(r => r.user_id === user.id).length : dailyRefuelings.length,
       lubricants: isOperador ? dailyLubricants.filter(l => l.user_id === user.id).length : dailyLubricants.length,
       maintenancesTotal: isOperador ? dailyMaintenances.filter(m => m.user_id === user.id).length : dailyMaintenances.length,
-      maintenancesActive: isOperador ? dailyMaintenances.filter(m => m.user_id === user.id && m.status === 'ACTIVE').length : dailyMaintenances.filter(m => m.status === 'ACTIVE').length,
+      maintenancesOpen: isOperador 
+        ? dailyMaintenances.filter(m => m.user_id === user.id && (m.status === 'ACTIVE' || m.status === 'PAUSED')).length 
+        : dailyMaintenances.filter(m => m.status === 'ACTIVE' || m.status === 'PAUSED').length,
     };
   }, [dailyChecklists, dailyRefuelings, dailyLubricants, dailyMaintenances, user]);
 
@@ -151,7 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       </div>
 
-      <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-${canAccessMaintenance ? '4' : '3'} gap-4`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${canAccessMaintenance ? '4' : '3'} gap-4`}>
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
             <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0A2540]">
                <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/></svg>
@@ -183,19 +185,26 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {canAccessMaintenance && (
-            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-red-600">
-                <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
+            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-2 divide-x divide-slate-100">
+              <div className="flex items-center gap-3 pr-4">
+                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-red-600 shrink-0">
+                  <svg className="w-5 h-5 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-[7px] font-black uppercase tracking-widest mb-0.5">O.S. Total</p>
+                  <p className="text-xl font-black text-[#0A2540]">{counts.maintenancesTotal}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-slate-400 text-[8px] font-black uppercase tracking-widest mb-0.5">Oficina Hoje</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-black text-[#0A2540]">{counts.maintenancesTotal}</p>
-                  {counts.maintenancesActive > 0 && (
-                    <span className="text-[9px] font-black bg-cyan-500 text-white px-2 py-0.5 rounded-full uppercase animate-pulse">
-                      {counts.maintenancesActive} EM CURSO
-                    </span>
-                  )}
+              <div className="flex items-center gap-3 pl-4">
+                <div className="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center text-cyan-500 shrink-0">
+                  <svg className="w-5 h-5 text-cyan-200" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/></svg>
+                </div>
+                <div>
+                  <p className="text-cyan-500 text-[7px] font-black uppercase tracking-widest mb-0.5">Em Aberto</p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-xl font-black text-cyan-600">{counts.maintenancesOpen}</p>
+                    {counts.maintenancesOpen > 0 && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse shadow-[0_0_5px_cyan]"></div>}
+                  </div>
                 </div>
               </div>
             </div>
