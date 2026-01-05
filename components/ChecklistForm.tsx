@@ -239,13 +239,25 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
 
   const issuesSummary = useMemo(() => {
     return Object.entries(itemResponses)
-      .filter(([id, data]) => (data as any).status && (data as any).status !== ItemStatus.OK)
+      .filter(([id, data]) => (data as any).surveyed && (data as any).status && (data as any).status !== ItemStatus.OK)
       .map(([id, data]) => {
         const itemInfo = validAvailableItems.find(i => i.id.toString() === id);
         return {
           id,
           label: itemInfo ? `${itemInfo.id}. ${itemInfo.label}` : `Item ${id}`,
           status: (data as any).status
+        };
+      });
+  }, [itemResponses, validAvailableItems]);
+
+  const nonSurveyedSummary = useMemo(() => {
+    return Object.entries(itemResponses)
+      .filter(([id, data]) => !(data as any).surveyed)
+      .map(([id, data]) => {
+        const itemInfo = validAvailableItems.find(i => i.id.toString() === id);
+        return {
+          id,
+          label: itemInfo ? `${itemInfo.id}. ${itemInfo.label}` : `Item ${id}`
         };
       });
   }, [itemResponses, validAvailableItems]);
@@ -435,7 +447,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
 
         {step === 3 && (
           <div className="space-y-8 sm:space-y-10 animate-in fade-in zoom-in-95">
-             <div className="space-y-4 sm:space-y-5">
+             <div className="space-y-6 sm:space-y-8">
                 <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">Resumo da Inspeção</h4>
                 <p className="text-[10px] font-bold text-slate-400 mb-2 ml-2 italic">Data da Vistoria: {formatDateDisplay(new Date().toISOString().split('T')[0])}</p>
                 
@@ -453,13 +465,27 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
                   </div>
                 )}
 
-                {issuesSummary.length === 0 && (
+                {nonSurveyedSummary.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Itens Não Vistoriados</p>
+                    <div className="bg-slate-50 rounded-[1.8rem] sm:rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 space-y-3">
+                      {nonSurveyedSummary.map(item => (
+                        <div key={item.id} className="flex items-center justify-between border-b border-slate-200/50 last:border-0 pb-2 sm:pb-3 last:pb-0 gap-3">
+                          <span className="text-xs sm:text-sm font-black text-slate-400 leading-tight">{item.label}</span>
+                          <span className="text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-slate-200 text-slate-500 shadow-sm shrink-0">IGNORADO</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {issuesSummary.length === 0 && nonSurveyedSummary.length === 0 && (
                   <div className="bg-[#58CC02]/10 rounded-[1.8rem] sm:rounded-[2.5rem] p-8 sm:p-10 border border-[#58CC02]/20 text-center">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#58CC02] text-white rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-xl shadow-green-100">
                         <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <p className="text-xs sm:text-sm font-black text-[#58CC02] uppercase tracking-widest">Aprovado sem Falhas</p>
-                    <p className="text-[10px] text-green-600 font-bold mt-1">Inspeção concluída com sucesso.</p>
+                    <p className="text-xs sm:text-sm font-black text-[#58CC02] uppercase tracking-widest">Veículo 100% OK</p>
+                    <p className="text-[10px] text-green-600 font-bold mt-1">Inspeção completa concluída com sucesso.</p>
                   </div>
                 )}
              </div>

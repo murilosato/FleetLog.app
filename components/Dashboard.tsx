@@ -62,8 +62,13 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const counts = useMemo(() => {
     const isOperador = user.role === 'OPERADOR';
+    
+    const checklistsSet = isOperador ? dailyChecklists.filter(s => s.user_id === user.id) : dailyChecklists;
+    const pendingChecklists = checklistsSet.filter(s => !s.operation_checked || !s.maintenance_checked).length;
+
     return {
-      checklists: isOperador ? dailyChecklists.filter(s => s.user_id === user.id).length : dailyChecklists.length,
+      checklists: checklistsSet.length,
+      pendingChecklists,
       refuelings: isOperador ? dailyRefuelings.filter(r => r.user_id === user.id).length : dailyRefuelings.length,
       lubricants: isOperador ? dailyLubricants.filter(l => l.user_id === user.id).length : dailyLubricants.length,
       maintenancesTotal: isOperador ? dailyMaintenances.filter(m => m.user_id === user.id).length : dailyMaintenances.length,
@@ -154,13 +159,28 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${canAccessMaintenance ? '4' : '3'} gap-4`}>
-          <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0A2540]">
-               <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/></svg>
+          {/* VISTORIAS HOJE E PENDENTES */}
+          <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-2 divide-x divide-slate-100">
+            <div className="flex items-center gap-3 pr-4">
+              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-[#0A2540] shrink-0">
+                <svg className="w-5 h-5 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/></svg>
+              </div>
+              <div>
+                <p className="text-slate-400 text-[7px] font-black uppercase tracking-widest mb-0.5">Vistorias</p>
+                <p className="text-xl font-black text-[#0A2540]">{counts.checklists}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-slate-400 text-[8px] font-black uppercase tracking-widest mb-0.5">Vistorias Hoje</p>
-              <p className="text-2xl font-black text-[#0A2540]">{counts.checklists}</p>
+            <div className="flex items-center gap-3 pl-4">
+              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 shrink-0">
+                <svg className="w-5 h-5 text-orange-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+              </div>
+              <div>
+                <p className="text-orange-500 text-[7px] font-black uppercase tracking-widest mb-0.5">Pendentes</p>
+                <div className="flex items-center gap-1">
+                   <p className={`text-xl font-black ${counts.pendingChecklists > 0 ? 'text-orange-600' : 'text-slate-300'}`}>{counts.pendingChecklists}</p>
+                   {counts.pendingChecklists > 0 && <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse shadow-[0_0_5px_orange]"></div>}
+                </div>
+              </div>
             </div>
           </div>
 
