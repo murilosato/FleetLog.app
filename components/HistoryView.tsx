@@ -44,7 +44,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     setErrorMessage(null);
     try {
       let query = supabase
-        .from('entries')
+        .from('checklist_entries')
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate)
@@ -58,7 +58,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       
       if (error) {
         if (error.code === '42P01') {
-          setErrorMessage("Erro de Configuração: A tabela 'entries' não foi encontrada no banco de dados. Verifique o SQL de instalação.");
+          setErrorMessage("Erro de Configuração: A tabela 'checklist_entries' não foi encontrada no banco de dados. Verifique o SQL de instalação.");
         } else {
           setErrorMessage("Erro ao buscar registros: " + error.message);
         }
@@ -152,7 +152,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       }
 
       const { error } = await supabase
-        .from('entries')
+        .from('checklist_entries')
         .update(updateData)
         .eq('id', selected.id);
 
@@ -189,7 +189,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       const hasMissing = Object.values(editItems).some((r: any) => r.status === ItemStatus.MISSING);
 
       const { error } = await supabase
-        .from('entries')
+        .from('checklist_entries')
         .update({
           items: editItems,
           general_observations: editObs,

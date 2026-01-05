@@ -33,7 +33,7 @@ const App: React.FC = () => {
     if (!navigator.onLine) return;
     try {
       const [eRes, rRes, lRes, mRes] = await Promise.all([
-        supabase.from('entries').select('*').order('created_at', { ascending: false }),
+        supabase.from('checklist_entries').select('*').order('created_at', { ascending: false }),
         supabase.from('refueling_entries').select('*'),
         supabase.from('lubricant_entries').select('*'),
         supabase.from('maintenance_sessions').select('*')
@@ -105,7 +105,7 @@ const App: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      const { error } = await supabase.from('entries').insert([entry]);
+      const { error } = await supabase.from('checklist_entries').insert([entry]);
       if (error) throw error;
       await supabase.from('vehicles').update({ current_km: entry.km, current_horimetro: entry.horimetro }).eq('id', entry.vehicle_id);
       await fetchData();

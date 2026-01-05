@@ -62,7 +62,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
       if (type === 'Retorno' && selectedVehicle) {
         const today = new Date().toISOString().split('T')[0];
         const { data } = await supabase
-          .from('entries')
+          .from('checklist_entries')
           .select('*')
           .eq('vehicle_id', selectedVehicle.id)
           .eq('type', 'Saída')

@@ -38,14 +38,14 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
     setNoDataMessage(null);
     try {
       const { data, error } = await supabase
-        .from('entries')
+        .from('checklist_entries')
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: false });
 
       if (error) {
-        if (error.code === '42P01') throw new Error("A tabela de vistorias (entries) não existe. Execute o script SQL no painel Supabase.");
+        if (error.code === '42P01') throw new Error("A tabela de vistorias (checklist_entries) não existe. Execute o script SQL no painel Supabase.");
         throw error;
       }
       
