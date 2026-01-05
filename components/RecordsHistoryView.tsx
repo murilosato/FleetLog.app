@@ -5,11 +5,16 @@ import { supabase } from '../lib/supabase';
 
 interface RecordsHistoryViewProps {
   onBack: () => void;
+  initialTab?: 'refueling' | 'lubricant' | 'maintenance';
   onOpenMaintenance?: (id: string) => void;
 }
 
-const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, onOpenMaintenance }) => {
-  const [tab, setTab] = useState<'refueling' | 'lubricant' | 'maintenance'>('refueling');
+const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ 
+  onBack, 
+  initialTab = 'refueling',
+  onOpenMaintenance 
+}) => {
+  const [tab, setTab] = useState<'refueling' | 'lubricant' | 'maintenance'>(initialTab);
   const [refuelingHistory, setRefuelingHistory] = useState<RefuelingEntry[]>([]);
   const [lubricantHistory, setLubricantHistory] = useState<LubricantEntry[]>([]);
   const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceSession[]>([]);
@@ -26,6 +31,11 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, onOpenM
   useEffect(() => {
     fetchHistory();
   }, [tab]);
+
+  // Atualiza a aba se o initialTab mudar (vindo do portal)
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -96,11 +106,11 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, onOpenM
           <button onClick={onBack} className="p-3.5 bg-white shadow-sm border border-slate-100 rounded-2xl hover:bg-slate-50 transition-all">
             <svg className="w-5 h-5 text-[#0A2540]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           </button>
-          <h2 className="text-2xl sm:text-3xl font-black text-[#0A2540] tracking-tight">Histórico de Registros</h2>
+          <h2 className="text-2xl sm:text-3xl font-black text-[#0A2540] tracking-tight uppercase">Histórico Operacional</h2>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-2xl w-full md:w-auto shadow-inner overflow-x-auto hide-scrollbar">
-          <button onClick={() => setTab('refueling')} className={`flex-1 md:w-32 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${tab === 'refueling' ? 'bg-[#1E90FF] text-white shadow-md' : 'text-slate-400'}`}>Insumos</button>
-          <button onClick={() => setTab('lubricant')} className={`flex-1 md:w-32 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${tab === 'lubricant' ? 'bg-[#1E90FF] text-white shadow-md' : 'text-slate-400'}`}>Lubrif.</button>
+          <button onClick={() => setTab('refueling')} className={`flex-1 md:w-32 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${tab === 'refueling' ? 'bg-[#58CC02] text-white shadow-md' : 'text-slate-400'}`}>Abastec.</button>
+          <button onClick={() => setTab('lubricant')} className={`flex-1 md:w-32 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${tab === 'lubricant' ? 'bg-[#FFA500] text-white shadow-md' : 'text-slate-400'}`}>Lubrif.</button>
           <button onClick={() => setTab('maintenance')} className={`flex-1 md:w-32 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${tab === 'maintenance' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400'}`}>Oficina</button>
         </div>
       </div>
@@ -152,7 +162,7 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, onOpenM
                            <p className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">{entry.opening_reason}</p>
                         </td>
                         <td className="px-6 py-4 text-center">
-                           <span className={`font-tech font-black text-sm ${isInProgress ? 'text-[#1E90FF] animate-pulse' : 'text-red-600'}`}>
+                           <span className={`font-tech font-black text-sm ${isInProgress ? 'text-red-600 animate-pulse' : 'text-[#0A2540]'}`}>
                              {isInProgress ? 'CONTANDO...' : formatDuration(entry.total_effective_seconds)}
                            </span>
                         </td>
@@ -167,7 +177,7 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, onOpenM
                              {isInProgress && onOpenMaintenance && (
                               <button 
                                 onClick={(e) => { e.stopPropagation(); onOpenMaintenance(entry.id); }}
-                                className="px-2 py-1 bg-[#0A2540] text-white rounded-lg text-[7px] font-black uppercase tracking-widest hover:bg-[#1E90FF] transition-all"
+                                className="px-2 py-1 bg-[#0A2540] text-white rounded-lg text-[7px] font-black uppercase tracking-widest hover:bg-red-600 transition-all"
                               >Entrar</button>
                              )}
                            </div>
@@ -228,8 +238,8 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, onOpenM
                         <p className="font-medium text-slate-400 text-[9px]">{time}</p>
                       </td>
                       <td className="px-6 py-4 font-black text-[#0A2540] text-sm">{entry.prefix}</td>
-                      <td className="px-6 py-4 text-center font-black text-[#1E90FF] text-[11px]">{entry.km}</td>
-                      <td className="px-6 py-4 text-center font-black text-[#1E90FF] text-[11px]">{entry.horimetro}</td>
+                      <td className="px-6 py-4 text-center font-black text-[#58CC02] text-[11px]">{entry.km}</td>
+                      <td className="px-6 py-4 text-center font-black text-[#58CC02] text-[11px]">{entry.horimetro}</td>
                       <td className="px-6 py-4">
                         <span className="text-[8px] font-black bg-green-50 text-green-600 px-2 py-0.5 rounded-md uppercase border border-green-100">{entry.fuel_name}</span>
                       </td>

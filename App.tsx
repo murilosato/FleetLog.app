@@ -18,6 +18,7 @@ import { saveOfflineEntry, saveMetadata, getMetadata } from './lib/db';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<'dashboard' | 'form' | 'refueling' | 'lubricant' | 'maintenance_timer' | 'history_portal' | 'history_checklists' | 'history_records' | 'admin' | 'reports'>('dashboard');
+  const [initialRecordTab, setInitialRecordTab] = useState<'refueling' | 'lubricant' | 'maintenance'>('refueling');
   const [selectedMaintId, setSelectedMaintId] = useState<string | null>(null);
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
   const [refuelingEntries, setRefuelingEntries] = useState<RefuelingEntry[]>([]);
@@ -199,11 +200,20 @@ const App: React.FC = () => {
             onBack={() => { setView('dashboard'); setSelectedMaintId(null); }} 
           />
         )}
-        {view === 'history_portal' && <HistoryPortal onSelectChecklists={() => setView('history_checklists')} onSelectRecords={() => setView('history_records')} onBack={() => setView('dashboard')} />}
+        {view === 'history_portal' && (
+          <HistoryPortal 
+            onSelectChecklists={() => setView('history_checklists')} 
+            onSelectRefueling={() => { setInitialRecordTab('refueling'); setView('history_records'); }}
+            onSelectLubricant={() => { setInitialRecordTab('lubricant'); setView('history_records'); }}
+            onSelectMaintenance={() => { setInitialRecordTab('maintenance'); setView('history_records'); }}
+            onBack={() => setView('dashboard')} 
+          />
+        )}
         {view === 'history_checklists' && <HistoryView submissions={entries} user={user} users={users} availableItems={checklistItems} onBack={() => setView('history_portal')} onRefresh={fetchData} />}
         {view === 'history_records' && (
           <RecordsHistoryView 
             onBack={() => setView('history_portal')} 
+            initialTab={initialRecordTab}
             onOpenMaintenance={(id) => { setSelectedMaintId(id); setView('maintenance_timer'); }}
           />
         )}
