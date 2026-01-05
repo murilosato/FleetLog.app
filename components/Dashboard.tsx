@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
-import { ChecklistEntry, User, DBChecklistItem, RefuelingEntry, LubricantEntry } from '../types';
+import { ChecklistEntry, User, DBChecklistItem, RefuelingEntry, LubricantEntry, MaintenanceSession } from '../types';
 
 interface DashboardProps {
   submissions: ChecklistEntry[];
   refuelings: RefuelingEntry[];
   lubricants: LubricantEntry[];
+  maintenances: MaintenanceSession[];
   user: User;
   availableItems: DBChecklistItem[];
   onNewChecklist: () => void;
@@ -23,6 +24,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   submissions, 
   refuelings = [],
   lubricants = [],
+  maintenances = [],
   user,
   onNewChecklist, 
   onNewRefueling,
@@ -53,14 +55,21 @@ const Dashboard: React.FC<DashboardProps> = ({
     [lubricants, dashboardDate]
   );
 
+  const dailyMaintenances = useMemo(() =>
+    maintenances.filter(m => m.start_time.startsWith(dashboardDate)),
+    [maintenances, dashboardDate]
+  );
+
   const counts = useMemo(() => {
     const isOperador = user.role === 'OPERADOR';
     return {
       checklists: isOperador ? dailyChecklists.filter(s => s.user_id === user.id).length : dailyChecklists.length,
       refuelings: isOperador ? dailyRefuelings.filter(r => r.user_id === user.id).length : dailyRefuelings.length,
       lubricants: isOperador ? dailyLubricants.filter(l => l.user_id === user.id).length : dailyLubricants.length,
+      maintenancesTotal: isOperador ? dailyMaintenances.filter(m => m.user_id === user.id).length : dailyMaintenances.length,
+      maintenancesActive: isOperador ? dailyMaintenances.filter(m => m.user_id === user.id && m.status === 'ACTIVE').length : dailyMaintenances.filter(m => m.status === 'ACTIVE').length,
     };
-  }, [dailyChecklists, dailyRefuelings, dailyLubricants, user]);
+  }, [dailyChecklists, dailyRefuelings, dailyLubricants, dailyMaintenances, user]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -96,7 +105,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      <div className={`grid grid-cols-1 md:grid-cols-${canAccessMaintenance ? '4' : '3'} gap-4`}>
+      <div className={`grid grid-cols-1 xs:grid-cols-2 md:grid-cols-${canAccessMaintenance ? '4' : '3'} gap-4`}>
         <button onClick={onNewChecklist} className="bg-[#0A2540] p-6 rounded-3xl text-white shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex flex-col items-center justify-center text-center gap-4 group">
           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 group-hover:scale-110 transition-transform">
              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
@@ -142,7 +151,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-${canAccessMaintenance ? '4' : '3'} gap-4`}>
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
             <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[#0A2540]">
                <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/></svg>
@@ -172,6 +181,25 @@ const Dashboard: React.FC<DashboardProps> = ({
               <p className="text-2xl font-black text-[#0A2540]">{counts.lubricants}</p>
             </div>
           </div>
+
+          {canAccessMaintenance && (
+            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-red-600">
+                <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
+              </div>
+              <div>
+                <p className="text-slate-400 text-[8px] font-black uppercase tracking-widest mb-0.5">Oficina Hoje</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-black text-[#0A2540]">{counts.maintenancesTotal}</p>
+                  {counts.maintenancesActive > 0 && (
+                    <span className="text-[9px] font-black bg-cyan-500 text-white px-2 py-0.5 rounded-full uppercase animate-pulse">
+                      {counts.maintenancesActive} EM CURSO
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
       </div>
 
       <div className="pt-2">

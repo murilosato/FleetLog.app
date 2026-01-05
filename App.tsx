@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { User, ChecklistEntry, Vehicle, DBChecklistItem, RefuelingEntry, LubricantEntry } from './types';
+import { User, ChecklistEntry, Vehicle, DBChecklistItem, RefuelingEntry, LubricantEntry, MaintenanceSession } from './types';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ChecklistForm from './components/ChecklistForm';
@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
   const [refuelingEntries, setRefuelingEntries] = useState<RefuelingEntry[]>([]);
   const [lubricantEntries, setLubricantEntries] = useState<LubricantEntry[]>([]);
+  const [maintenanceSessions, setMaintenanceSessions] = useState<MaintenanceSession[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [checklistItems, setChecklistItems] = useState<DBChecklistItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -30,15 +31,17 @@ const App: React.FC = () => {
   const fetchData = useCallback(async () => {
     if (!navigator.onLine) return;
     try {
-      const [eRes, rRes, lRes] = await Promise.all([
+      const [eRes, rRes, lRes, mRes] = await Promise.all([
         supabase.from('entries').select('*').order('created_at', { ascending: false }),
         supabase.from('refueling_entries').select('*'),
-        supabase.from('lubricant_entries').select('*')
+        supabase.from('lubricant_entries').select('*'),
+        supabase.from('maintenance_sessions').select('*')
       ]);
 
       if (eRes.data) setEntries(eRes.data as ChecklistEntry[]);
       if (rRes.data) setRefuelingEntries(rRes.data as RefuelingEntry[]);
       if (lRes.data) setLubricantEntries(lRes.data as LubricantEntry[]);
+      if (mRes.data) setMaintenanceSessions(mRes.data as MaintenanceSession[]);
     } catch (err) {
       console.error('Erro ao buscar dados:', err);
     }
@@ -171,6 +174,7 @@ const App: React.FC = () => {
             submissions={entries} 
             refuelings={refuelingEntries}
             lubricants={lubricantEntries}
+            maintenances={maintenanceSessions}
             user={user}
             availableItems={checklistItems}
             onNewChecklist={() => setView('form')} 
