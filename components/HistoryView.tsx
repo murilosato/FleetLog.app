@@ -340,12 +340,27 @@ const HistoryView: React.FC<HistoryViewProps> = ({
                         Itens Verificados
                      </h4>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                       {Object.entries(selected.items).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([id, data]: [string, any]) => (
-                          <div key={id} className={`flex items-center justify-between p-3.5 rounded-xl border-2 transition-all ${data.status === ItemStatus.OK ? 'bg-white border-slate-50' : 'bg-red-50 border-red-50'}`}>
-                             <span className="text-[11px] font-black truncate text-slate-700 pr-3">{getItemLabel(id)}</span>
-                             <span className={`text-[8px] font-black px-2 py-1 rounded-lg uppercase ${data.status === ItemStatus.OK ? 'bg-[#58CC02] text-white' : 'bg-red-600 text-white'}`}>{getStatusDisplay(data.status)}</span>
-                          </div>
-                       ))}
+                       {Object.entries(selected.items).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).map(([id, data]: [string, any]) => {
+                          const isNotSurveyed = data.surveyed === false;
+                          const isOk = data.status === ItemStatus.OK;
+                          
+                          let containerClass = isOk ? 'bg-white border-slate-50' : 'bg-red-50 border-red-50';
+                          let badgeClass = isOk ? 'bg-[#58CC02] text-white' : 'bg-red-600 text-white';
+                          let statusLabel = getStatusDisplay(data.status);
+
+                          if (isNotSurveyed) {
+                            containerClass = 'bg-slate-50 border-slate-50 opacity-70';
+                            badgeClass = 'bg-slate-200 text-slate-500';
+                            statusLabel = 'NÃO VISTORIADO';
+                          }
+
+                          return (
+                            <div key={id} className={`flex items-center justify-between p-3.5 rounded-xl border-2 transition-all ${containerClass}`}>
+                               <span className="text-[11px] font-black truncate text-slate-700 pr-3">{getItemLabel(id)}</span>
+                               <span className={`text-[8px] font-black px-2 py-1 rounded-lg uppercase ${badgeClass}`}>{statusLabel}</span>
+                            </div>
+                          );
+                       })}
                      </div>
                   </div>
 
