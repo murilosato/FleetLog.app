@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Using type assertion to access Vite environment variables and fix TypeScript 'ImportMeta' error
+const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
+// Using type assertion to access Vite environment variables and fix TypeScript 'ImportMeta' error
+const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
