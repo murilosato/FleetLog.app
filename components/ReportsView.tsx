@@ -21,8 +21,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
     return `${day}/${month}/${year}`;
   };
 
-  const showNoDataAlert = () => {
-    setNoDataMessage("Nenhum registro encontrado para o período e tipo selecionado.");
+  const showNoDataAlert = (msg?: string) => {
+    setNoDataMessage(msg || "Nenhum registro encontrado para o período e tipo selecionado.");
     setTimeout(() => setNoDataMessage(null), 5000);
   };
 
@@ -44,7 +44,11 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         .lte('date', endDate)
         .order('date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01') throw new Error("A tabela de vistorias (entries) não existe. Execute o script SQL no painel Supabase.");
+        throw error;
+      }
+      
       if (!data || data.length === 0) {
         showNoDataAlert();
         return;
@@ -91,7 +95,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
       downloadCSV(`Relatorio_Checklist_${startDate}_${endDate}`, headers, rows);
     } catch (err: any) {
-      alert("Erro ao exportar: " + err.message);
+      alert("Erro ao exportar Checklist: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -108,7 +112,11 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         .lte('event_at', `${endDate}T23:59:59`)
         .order('event_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01') throw new Error("A view de abastecimento (refueling_history_view) não existe. Execute o script SQL no painel Supabase.");
+        throw error;
+      }
+      
       if (!data || data.length === 0) {
         showNoDataAlert();
         return;
@@ -128,7 +136,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
       downloadCSV(`Relatorio_Abastecimento_${startDate}_${endDate}`, headers, rows);
     } catch (err: any) {
-      alert("Erro ao exportar: " + err.message);
+      alert("Erro ao exportar Abastecimentos: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -145,7 +153,11 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         .lte('event_at', `${endDate}T23:59:59`)
         .order('event_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01') throw new Error("A view de lubrificantes (lubricant_history_view) não existe.");
+        throw error;
+      }
+      
       if (!data || data.length === 0) {
         showNoDataAlert();
         return;
@@ -164,7 +176,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
       downloadCSV(`Relatorio_Lubrificantes_${startDate}_${endDate}`, headers, rows);
     } catch (err: any) {
-      alert("Erro ao exportar: " + err.message);
+      alert("Erro ao exportar Lubrificantes: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -181,7 +193,11 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         .lte('start_time', `${endDate}T23:59:59`)
         .order('start_time', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01') throw new Error("A view de oficina (maintenance_history_view) não existe.");
+        throw error;
+      }
+      
       if (!data || data.length === 0) {
         showNoDataAlert();
         return;
@@ -208,7 +224,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
       downloadCSV(`Relatorio_Manutencao_${startDate}_${endDate}`, headers, rows);
     } catch (err: any) {
-      alert("Erro ao exportar: " + err.message);
+      alert("Erro ao exportar Manutenção: " + err.message);
     } finally {
       setLoading(false);
     }

@@ -22,8 +22,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 }) => {
   const [localSubmissions, setLocalSubmissions] = useState<ChecklistEntry[]>([]);
   const [selected, setSelected] = useState<ChecklistEntry | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  // Filtros de Data - Padrão: Últimos 7 dias
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -41,6 +41,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
 
   const fetchChecklists = async () => {
     setIsLoading(true);
+    setErrorMessage(null);
     try {
       let query = supabase
         .from('entries')
@@ -54,10 +55,20 @@ const HistoryView: React.FC<HistoryViewProps> = ({
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      if (error) {
+        if (error.code === '42P01') {
+          setErrorMessage("Erro de Configuração: A tabela 'entries' não foi encontrada no banco de dados. Verifique o SQL de instalação.");
+        } else {
+          setErrorMessage("Erro ao buscar registros: " + error.message);
+        }
+        return;
+      }
+      
       setLocalSubmissions((data as ChecklistEntry[]) || []);
-    } catch (err) {
-      console.error('Erro ao carregar checklists:', err);
+    } catch (err: any) {
+      console.error('Erro crítico no histórico:', err);
+      setErrorMessage("Erro interno ao carregar dados.");
     } finally {
       setIsLoading(false);
     }
@@ -246,6 +257,12 @@ const HistoryView: React.FC<HistoryViewProps> = ({
             <div className="text-center p-10 bg-white rounded-3xl border-2 border-dashed border-slate-100">
                <svg className="animate-spin h-8 w-8 text-[#1E90FF] mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">Consultando banco de dados...</p>
+            </div>
+          ) : errorMessage ? (
+            <div className="bg-red-50 p-6 rounded-3xl border-2 border-red-100 text-center space-y-3">
+               <svg className="w-8 h-8 text-red-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+               <p className="text-[10px] font-black text-red-600 uppercase leading-relaxed">{errorMessage}</p>
+               <button onClick={fetchChecklists} className="text-[9px] font-black text-red-500 underline uppercase">Tentar novamente</button>
             </div>
           ) : filteredSubmissions.length > 0 ? filteredSubmissions.map(sub => {
             const opPending = !sub.operation_checked;
