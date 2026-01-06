@@ -82,7 +82,12 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         itemsToExport.forEach(item => {
           const sItem = s.items ? (s.items[item.id.toString()] || s.items[item.id]) : null;
           if (sItem) {
-            itemData.push(sItem.status || 'OK');
+            // Verifica explicitamente se o item foi vistoriado
+            if (sItem.surveyed === false) {
+              itemData.push('NÃO VISTORIADO');
+            } else {
+              itemData.push(sItem.status || 'OK');
+            }
             itemData.push((sItem.observations || '').replace(/(\r\n|\n|\r|")/gm, " "));
           } else {
             itemData.push('N/A');
