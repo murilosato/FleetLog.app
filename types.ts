@@ -19,7 +19,6 @@ export interface User {
   role: 'ADMIN' | 'OPERADOR' | 'MANUTENCAO' | 'OPERACAO';
   matricula: string;
   active: boolean;
-  // password_hash não é exposto no front-end por segurança
 }
 
 export interface Vehicle {

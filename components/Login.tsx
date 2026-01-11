@@ -48,20 +48,26 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      // Nota: Para um sistema comercial, recomenda-se usar o Supabase Auth (auth.signInWithPassword)
-      // Aqui simulamos a validação via tabela 'public.users' conforme solicitado
+      // Busca o usuário. Filtramos por 'active' apenas se a coluna existir no banco.
+      // O erro anterior confirmou que a coluna não existia.
       const { data, error: dbError } = await supabase
         .from('users')
         .select('*')
         .eq('username', cleanUser)
-        .eq('password_hash', cleanPass) // Em produção, usar comparação de Hash Bcrypt
-        .eq('active', true)
+        .eq('password_hash', cleanPass)
         .maybeSingle();
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        if (dbError.message.includes('column users.active')) {
+          throw new Error('Erro de sistema: A coluna "active" está ausente no banco. Por favor, execute o script SQL de atualização.');
+        }
+        throw dbError;
+      }
 
       if (!data) {
-        setError('Usuário ou senha incorretos, ou conta desativada.');
+        setError('Usuário ou senha incorretos.');
+      } else if (data.active === false) {
+        setError('Esta conta foi desativada pelo administrador.');
       } else {
         onLogin(data as User);
       }
@@ -101,7 +107,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-[#1E90FF] focus:bg-white outline-none transition-all text-slate-900 font-bold placeholder:text-slate-300"
-                  placeholder="ex: joao.silva"
+                  placeholder="Seu usuário"
                   autoComplete="username"
                   required
                 />
@@ -169,16 +175,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <span className="text-[10px] font-black uppercase tracking-widest">Baixar App Corporativo</span>
             </button>
             <div className="flex items-center gap-4">
-              <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">v6.0.0 Business</span>
+              <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">v6.1.0 Business</span>
               <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
               <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">SSL Secure</span>
             </div>
           </div>
         </div>
-        
-        <p className="mt-8 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest px-8 leading-relaxed">
-          Sua conta é pessoal e intransferível.<br/>O uso indevido resultará em medidas administrativas.
-        </p>
       </div>
     </div>
   );
