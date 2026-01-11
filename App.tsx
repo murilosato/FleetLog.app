@@ -28,18 +28,23 @@ const App: React.FC = () => {
   const [checklistItems, setChecklistItems] = useState<DBChecklistItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
   
   const fetchData = useCallback(async () => {
     if (!navigator.onLine) return;
     try {
-      const { data: checklists } = await supabase.from('checklist_entries').select('*').order('created_at', { ascending: false });
-      const { data: refueling } = await supabase.from('refueling_entries').select('*');
-      const { data: lubricants } = await supabase.from('lubricant_entries').select('*');
-      const { data: maintenance } = await supabase.from('maintenance_sessions').select('*');
+      const { data: checklists, error: e1 } = await supabase.from('checklist_entries').select('*').order('created_at', { ascending: false });
+      const { data: refueling, error: e2 } = await supabase.from('refueling_entries').select('*');
+      const { data: lubricants, error: e3 } = await supabase.from('lubricant_entries').select('*');
+      const { data: maintenance, error: e4 } = await supabase.from('maintenance_sessions').select('*');
+
+      if (e1 || e2 || e3 || e4) {
+        console.warn("Algumas tabelas de histórico podem estar vazias ou inacessíveis.");
+      }
 
       if (checklists) setEntries(checklists as ChecklistEntry[]);
       if (refueling) setRefuelingEntries(refueling as RefuelingEntry[]);
-      if (lubricants) setLubricantEntries(lubricants as LubricantEntry[]);
+      if (lubricants) setLubricantEntries(lubricantEntries as LubricantEntry[]);
       if (maintenance) setMaintenanceSessions(maintenance as MaintenanceSession[]);
     } catch (err) {
       console.error('Erro ao buscar dados do Dashboard:', err);
@@ -48,10 +53,11 @@ const App: React.FC = () => {
 
   const initAppData = useCallback(async () => {
     setIsLoading(true);
+    setDbError(null);
     try {
       if (navigator.onLine) {
-        // Busca independente para evitar que falha em uma tabela bloqueie as outras (ex: RLS na tabela users)
         const vRes = await supabase.from('vehicles').select('*').order('prefix', { ascending: true });
+        if (vRes.error) throw vRes.error;
         if (vRes.data) {
           setVehicles(vRes.data);
           await saveMetadata('vehicles', vRes.data);
@@ -76,8 +82,9 @@ const App: React.FC = () => {
         if (cachedItems) setChecklistItems(cachedItems);
         if (cachedUsers) setUsers(cachedUsers);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao inicializar dados mestres:', err);
+      setDbError(err.message || 'Erro de conexão com o banco de dados.');
     } finally {
       setIsLoading(false);
     }
@@ -90,13 +97,12 @@ const App: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchData();
-      initAppData(); // Força recarregamento após login para garantir permissões
+      initAppData();
     }
   }, [user, fetchData, initAppData]);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
-    initAppData(); // Tenta carregar veículos imediatamente após login
   };
 
   const handleLogout = () => { setUser(null); setView('dashboard'); };
@@ -143,10 +149,11 @@ const App: React.FC = () => {
       <header className="bg-[#020617] text-white shadow-lg sticky top-0 z-50 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { setView('dashboard'); setSelectedMaintId(null); }}>
-            <div className="flex items-baseline bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-800">
-              <span className="font-black text-lg sm:text-xl tracking-tighter text-[#00548b]">FLEET</span>
-              <span className="font-black text-lg sm:text-xl tracking-tighter text-[#425466]">LOG</span>
-            </div>
+            {/* Logo oficial idêntico ao Login (FLEET azul e LOG cinza) */}
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter flex items-baseline select-none">
+              <span className="text-[#00548b]">FLEET</span>
+              <span className="text-[#425466]">LOG</span>
+            </h1>
           </div>
           
           <nav className="flex items-center gap-1 sm:gap-2 mx-4 overflow-x-auto hide-scrollbar">
@@ -172,6 +179,12 @@ const App: React.FC = () => {
         </div>
       </header>
 
+      {dbError && (
+        <div className="bg-red-600 text-white p-2 text-center text-[10px] font-black uppercase tracking-widest animate-pulse">
+          Problema de conexão: {dbError} | <button onClick={() => initAppData()} className="underline">Tentar Novamente</button>
+        </div>
+      )}
+
       <main className="flex-1 max-w-5xl w-full mx-auto p-4 pb-24">
         {view === 'dashboard' && (
           <Dashboard 
@@ -186,7 +199,7 @@ const App: React.FC = () => {
             onNewLubricant={() => setView('lubricant')}
             onMaintenanceTimer={() => { setView('maintenance_timer'); setSelectedMaintId(null); }}
             onViewHistory={() => setView('history_portal')}
-            onRefresh={fetchData}
+            onRefresh={() => { fetchData(); initAppData(); }}
             aiSummary={null}
             isSummarizing={false}
             generateAiReport={() => {}}

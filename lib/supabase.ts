@@ -1,16 +1,24 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Função auxiliar para obter variáveis de ambiente de forma segura
+// Função auxiliar para buscar variáveis de ambiente em diferentes padrões (Vite, Process, etc)
 const getEnvVar = (name: string): string => {
-  // Tenta obter do import.meta.env (Padrão Vite)
-  if (typeof (import.meta as any).env !== 'undefined' && (import.meta as any).env[name]) {
-    return (import.meta as any).env[name];
+  const env = (import.meta as any).env || {};
+  const proc = (typeof process !== 'undefined' ? process.env : {}) as any;
+  
+  // Lista de possíveis nomes para a mesma variável
+  const fallbacks: Record<string, string[]> = {
+    'VITE_SUPABASE_URL': ['VITE_SUPABASE_URL', 'SUPABASE_URL', 'REACT_APP_SUPABASE_URL'],
+    'VITE_SUPABASE_ANON_KEY': ['VITE_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY', 'REACT_APP_SUPABASE_ANON_KEY']
+  };
+
+  const keysToTry = fallbacks[name] || [name];
+  
+  for (const key of keysToTry) {
+    if (env[key]) return env[key];
+    if (proc[key]) return proc[key];
   }
-  // Tenta obter do process.env (Fallback para outros ambientes)
-  if (typeof process !== 'undefined' && process.env && process.env[name]) {
-    return process.env[name] as string;
-  }
+  
   return '';
 };
 
@@ -18,7 +26,7 @@ const supabaseUrl = getEnvVar('VITE_SUPABASE_URL');
 const supabaseKey = getEnvVar('VITE_SUPABASE_ANON_KEY');
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn("Supabase credentials not found. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.");
+  console.error("ERRO DE CONEXÃO: Variáveis do Supabase não encontradas. Verifique as configurações de ambiente.");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
