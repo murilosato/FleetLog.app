@@ -82,7 +82,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         itemsToExport.forEach(item => {
           const sItem = s.items ? (s.items[item.id.toString()] || s.items[item.id]) : null;
           if (sItem) {
-            // Verifica explicitamente se o item foi vistoriado
+            // Verifica explicitamente se o item foi vistoriado no momento do envio
             if (sItem.surveyed === false) {
               itemData.push('NÃO VISTORIADO');
             } else {
@@ -375,7 +375,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         )}
 
         <div className="pt-6 border-t border-slate-50">
-          <button onClick={handleExport} disabled={loading} className={`w-full py-5 rounded-2xl text-white font-black text-xs uppercase tracking-[0.3em] shadow-xl flex items-center justify-center gap-4 transition-all active:scale-[0.98] ${loading ? 'bg-slate-300 cursor-not-allowed' : 'bg-[#0A2540] hover:bg-[#1E90FF]'}`}>
+          <button onClick={handleExport} disabled={loading} className={`w-full py-5 rounded-2xl text-white font-black text-xs uppercase tracking-[0.3em] shadow-xl flex items-center justify-center gap-4 transition-all active:scale-95 ${loading ? 'bg-slate-300 cursor-not-allowed' : 'bg-[#0A2540] hover:bg-[#1E90FF]'}`}>
             {loading ? 'Processando...' : `Baixar Relatório ${reportType === 'pauses' ? 'de Pausas' : ''}`}
           </button>
         </div>

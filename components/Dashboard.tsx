@@ -159,7 +159,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${canAccessMaintenance ? '4' : '3'} gap-4`}>
-          {/* VISTORIAS HOJE E PENDENTES */}
+          {/* VISTORIAS HOJE E NÃO VISTORIADOS */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-2 divide-x divide-slate-100">
             <div className="flex items-center gap-3 pr-4">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-[#0A2540] shrink-0">
@@ -171,14 +171,14 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3 pl-4">
-              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 shrink-0">
-                <svg className="w-5 h-5 text-orange-200" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 shrink-0">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
               </div>
               <div>
-                <p className="text-orange-500 text-[7px] font-black uppercase tracking-widest mb-0.5">Pendentes</p>
+                <p className="text-slate-500 text-[7px] font-black uppercase tracking-widest mb-0.5">Não Vistoriado</p>
                 <div className="flex items-center gap-1">
-                   <p className={`text-xl font-black ${counts.pendingChecklists > 0 ? 'text-orange-600' : 'text-slate-300'}`}>{counts.pendingChecklists}</p>
-                   {counts.pendingChecklists > 0 && <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse shadow-[0_0_5px_orange]"></div>}
+                   <p className={`text-xl font-black ${counts.pendingChecklists > 0 ? 'text-slate-600' : 'text-slate-300'}`}>{counts.pendingChecklists}</p>
+                   {counts.pendingChecklists > 0 && <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse"></div>}
                 </div>
               </div>
             </div>

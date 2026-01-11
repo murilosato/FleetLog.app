@@ -15,8 +15,10 @@ export interface User {
   id: string;
   name: string;
   username: string;
+  email?: string;
   role: 'ADMIN' | 'OPERADOR' | 'MANUTENCAO' | 'OPERACAO';
   matricula: string;
+  active: boolean;
 }
 
 export interface Vehicle {

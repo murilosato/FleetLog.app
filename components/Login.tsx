@@ -8,7 +8,9 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [credential, setCredential] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -24,7 +26,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleInstall = async () => {
     if (!installPrompt) {
-      alert("Para baixar o FleetLog, use a opção 'Adicionar à tela de início' ou 'Instalar Aplicativo' no menu do seu navegador.");
+      alert("Para baixar o FleetLog, use a opção 'Adicionar à tela de início' no menu do seu navegador.");
       return;
     }
     installPrompt.prompt();
@@ -34,10 +36,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanCredential = credential.trim();
+    const cleanId = identifier.trim();
+    const cleanPass = password.trim();
     
-    if (!cleanCredential) {
-      setError('Acesso negado: informe credenciais.');
+    if (!cleanId || !cleanPass) {
+      setError('Por favor, informe suas credenciais de acesso.');
       return;
     }
 
@@ -45,85 +48,101 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     try {
+      // Nota: Em um ambiente de produção real, use supabase.auth.signInWithPassword.
+      // Aqui simulamos a busca na tabela users com verificação de senha.
       const { data, error: dbError } = await supabase
         .from('users')
         .select('*')
-        .or(`username.eq.${cleanCredential},matricula.eq.${cleanCredential}`)
+        .or(`username.eq.${cleanId},email.eq.${cleanId},matricula.eq.${cleanId}`)
+        .eq('password_hash', cleanPass) // Em produção, usar bcrypt/hash
+        .eq('active', true)
         .maybeSingle();
 
       if (dbError) throw new Error(dbError.message);
 
       if (!data) {
-        setError('Usuário não identificado na central.');
+        setError('Credenciais inválidas ou conta inativa. Verifique seus dados.');
       } else {
         onLogin(data as User);
       }
     } catch (err: any) {
-      setError(`Erro de rede: ${err.message}`);
+      setError(`Falha na conexão: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background futurista */}
-      <div className="absolute inset-0 grid-bg opacity-40"></div>
-      <div className="animate-scan"></div>
-      
-      {/* Luzes de fundo decorativas */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px]"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-lime-500/5 rounded-full blur-[120px]"></div>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-rajdhani">
+      {/* Elementos Visuais de Fundo (Sutil/Profissional) */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#1E90FF] via-cyan-400 to-[#58CC02]"></div>
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-50 rounded-full blur-3xl opacity-50"></div>
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-green-50 rounded-full blur-3xl opacity-50"></div>
 
       <div className="max-w-md w-full relative z-10">
-        <div className="bg-slate-900/40 backdrop-blur-2xl border border-slate-700/50 rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+        <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-slate-100">
           
-          {/* Logo e Branding */}
-          <div className="flex flex-col items-center mb-10">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-lime-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-              <div className="relative w-20 h-20 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-700 text-cyan-400">
-                <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" className="animate-pulse" />
-                </svg>
-              </div>
+          {/* Logo e Título */}
+          <div className="flex flex-col items-center mb-10 text-center">
+            <div className="w-16 h-16 bg-[#0A2540] rounded-2xl flex items-center justify-center shadow-lg shadow-blue-100 mb-6">
+               <svg className="w-10 h-10 text-[#1E90FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
-            <h1 className="mt-6 text-4xl font-tech font-black tracking-widest text-white">
-              FLEET<span className="text-cyan-400">LOG</span>
+            <h1 className="text-3xl font-black text-[#0A2540] tracking-tight">
+              FLEET<span className="text-[#1E90FF]">LOG</span>
             </h1>
-            <div className="h-0.5 w-12 bg-cyan-500/50 mt-1 rounded-full"></div>
-            <p className="mt-4 text-slate-400 font-medium tracking-[0.2em] text-[10px] uppercase text-center">
-              Inteligência Operacional de Frota
-            </p>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">Professional Fleet Management</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-2">
-                <label className="text-[10px] font-bold text-cyan-500/70 uppercase tracking-[0.3em]">Autenticação</label>
-                <div className="flex gap-1">
-                  <div className="w-1 h-1 bg-cyan-500 rounded-full animate-ping"></div>
-                  <div className="w-1 h-1 bg-cyan-500/40 rounded-full"></div>
-                </div>
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Campo Identificador */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Usuário ou E-mail</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-500">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                </div>
                 <input 
                   type="text" 
-                  value={credential}
-                  onChange={(e) => setCredential(e.target.value)}
-                  className="w-full pl-14 pr-6 py-5 bg-slate-950/50 border border-slate-700 rounded-2xl focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 outline-none transition-all text-white font-semibold tracking-wider placeholder:text-slate-700"
-                  placeholder="ID DO OPERADOR"
-                  autoFocus
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-[#1E90FF] focus:bg-white outline-none transition-all text-slate-900 font-bold placeholder:text-slate-300"
+                  placeholder="Seu ID de acesso"
                   required
                 />
+                <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-200">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Campo Senha */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center px-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha de Acesso</label>
+                <button type="button" className="text-[9px] font-black text-[#1E90FF] uppercase hover:underline">Esqueci a senha</button>
+              </div>
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-[#1E90FF] focus:bg-white outline-none transition-all text-slate-900 font-bold placeholder:text-slate-300"
+                  placeholder="••••••••"
+                  required
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-[#1E90FF] transition-colors"
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+                  )}
+                </button>
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl text-red-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-3 animate-in fade-in zoom-in-95">
+              <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 animate-in fade-in zoom-in-95 border border-red-100">
                 <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
                 {error}
               </div>
@@ -132,44 +151,33 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <button 
               disabled={loading}
               type="submit"
-              className="w-full relative group overflow-hidden"
+              className="w-full py-5 bg-[#0A2540] text-white font-black rounded-2xl shadow-xl shadow-blue-50 hover:bg-[#1E90FF] active:scale-[0.98] transition-all text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-cyan-400 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-              <div className="relative bg-cyan-500 text-slate-950 font-tech font-black py-5 rounded-2xl shadow-[0_10px_30px_rgba(6,182,212,0.3)] group-active:scale-95 transition-all text-sm uppercase tracking-[0.3em] flex items-center justify-center gap-3">
-                {loading ? (
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                ) : (
-                  <>
-                    <span>INICIAR SESSÃO</span>
-                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                  </>
-                )}
-              </div>
+              {loading ? (
+                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              ) : (
+                <>
+                  <span>Entrar no Sistema</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-12 flex flex-col items-center gap-6">
-            <button 
+          <div className="mt-10 pt-8 border-t border-slate-50 flex flex-col items-center gap-4">
+             <button 
               onClick={handleInstall}
-              className="group relative flex items-center gap-3 bg-slate-950/40 border border-slate-800 hover:border-cyan-500/50 px-5 py-2.5 rounded-xl transition-all hover:bg-slate-900"
+              className="flex items-center gap-2 text-slate-400 hover:text-[#1E90FF] transition-colors"
             >
-              <div className="text-cyan-500/60 group-hover:text-cyan-400 transition-colors">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 15V3M12 15L8 11M12 15L16 11M2 17V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <span className="text-[9px] font-tech font-bold text-slate-500 group-hover:text-cyan-400 tracking-[0.1em] uppercase">Baixar FleetLog App</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span className="text-[9px] font-black uppercase tracking-widest">Instalar FleetLog App</span>
             </button>
-            <div className="flex items-center gap-4 w-full">
-              <div className="h-px flex-1 bg-slate-800"></div>
-              <span className="text-[8px] text-slate-600 font-bold uppercase tracking-[0.4em]">v4.0.0 CORE</span>
-              <div className="h-px flex-1 bg-slate-800"></div>
-            </div>
+            <p className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">v5.2.0 Enterprise</p>
           </div>
         </div>
         
-        <p className="mt-8 text-center text-slate-600 text-[10px] font-medium uppercase tracking-[0.1em] px-4">
-          "Aqui começam os dados da sua frota. Controle operacional inteligente em tempo real."
+        <p className="mt-8 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest px-4 leading-relaxed">
+          Uso restrito a funcionários autorizados.<br/>Monitoramento de atividades ativo.
         </p>
       </div>
     </div>
