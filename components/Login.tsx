@@ -58,7 +58,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       if (dbError) {
         if (dbError.message.includes('recursion')) {
-          throw new Error('Erro de segurança no banco de dados (Recursão). Por favor, execute o script SQL de correção fornecido.');
+          throw new Error('ERRO DE POLÍTICA: Recursão detectada no banco. Execute o novo script SQL de correção.');
         }
         throw dbError;
       }
@@ -174,7 +174,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <span className="text-[10px] font-black uppercase tracking-widest">Baixar App Corporativo</span>
             </button>
             <div className="flex items-center gap-4">
-              <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">v6.2.0 Business</span>
+              <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">v6.3.0 Business</span>
               <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
               <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">SSL Secure</span>
             </div>
