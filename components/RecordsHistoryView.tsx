@@ -21,59 +21,61 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({
   const [allPauses, setAllPauses] = useState<MaintenancePause[]>([]);
   const [expandedMaintId, setExpandedMaintId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchHistory();
   }, [tab]);
 
-  // Atualiza a aba se o initialTab mudar (vindo do portal)
   useEffect(() => {
     setTab(initialTab);
   }, [initialTab]);
 
   const fetchHistory = async () => {
     setLoading(true);
+    setError(null);
     try {
       if (tab === 'refueling') {
-        const { data, error } = await supabase
-          .from('refueling_history_view')
-          .select('*')
-          .order('event_at', { ascending: false });
-        if (error) throw error;
-        setRefuelingHistory(data || []);
+        // Tenta buscar da VIEW, se falhar, tenta da TABELA base
+        let res = await supabase.from('refueling_history_view').select('*').order('event_at', { ascending: false });
+        if (res.error) {
+          console.warn("View 'refueling_history_view' falhou, tentando tabela base...");
+          res = await supabase.from('refueling_entries').select('*').order('event_at', { ascending: false });
+        }
+        if (res.error) throw res.error;
+        setRefuelingHistory(res.data || []);
       } else if (tab === 'lubricant') {
-        const { data, error } = await supabase
-          .from('lubricant_history_view')
-          .select('*')
-          .order('event_at', { ascending: false });
-        if (error) throw error;
-        setLubricantHistory(data || []);
+        let res = await supabase.from('lubricant_history_view').select('*').order('event_at', { ascending: false });
+        if (res.error) {
+          console.warn("View 'lubricant_history_view' falhou, tentando tabela base...");
+          res = await supabase.from('lubricant_entries').select('*').order('event_at', { ascending: false });
+        }
+        if (res.error) throw res.error;
+        setLubricantHistory(res.data || []);
       } else {
-        const { data: sessions, error: sError } = await supabase
-          .from('maintenance_history_view')
-          .select('*')
-          .order('start_time', { ascending: false });
-        if (sError) throw sError;
+        let res = await supabase.from('maintenance_history_view').select('*').order('start_time', { ascending: false });
+        if (res.error) {
+          console.warn("View 'maintenance_history_view' falhou, tentando tabela base...");
+          res = await supabase.from('maintenance_sessions').select('*').order('start_time', { ascending: false });
+        }
+        if (res.error) throw res.error;
 
-        const sessionIds = (sessions || []).map(s => s.id);
-        const { data: pauses, error: pError } = await supabase
-          .from('maintenance_pauses')
-          .select('*')
-          .in('session_id', sessionIds);
+        const sessions = res.data || [];
+        const sessionIds = sessions.map(s => s.id);
         
-        if (pError) throw pError;
+        if (sessionIds.length > 0) {
+          const { data: pauses, error: pError } = await supabase
+            .from('maintenance_pauses')
+            .select('*')
+            .in('session_id', sessionIds);
+          if (!pError) setAllPauses(pauses || []);
+        }
         
         setMaintenanceHistory(sessions || []);
-        setAllPauses(pauses || []);
       }
     } catch (err: any) {
       console.error("Erro ao buscar histórico:", err.message);
+      setError(`Falha ao carregar dados: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -114,6 +116,12 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({
           <button onClick={() => setTab('maintenance')} className={`flex-1 md:w-32 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${tab === 'maintenance' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400'}`}>Oficina</button>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 p-4 rounded-2xl border border-red-100 text-red-600 text-[10px] font-black uppercase tracking-widest text-center">
+          {error}
+        </div>
+      )}
 
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto hide-scrollbar">
@@ -182,7 +190,7 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({
                              )}
                            </div>
                         </td>
-                        <td className="px-6 py-4 font-bold text-slate-400 text-[10px] truncate max-w-[100px]">{entry.user_name}</td>
+                        <td className="px-6 py-4 font-bold text-slate-400 text-[10px] truncate max-w-[100px]">{entry.user_name || 'N/A'}</td>
                       </tr>
                       {isExpanded && (
                         <tr className="bg-slate-50/50">
@@ -241,7 +249,7 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({
                       <td className="px-6 py-4 text-center font-black text-[#58CC02] text-[11px]">{entry.km}</td>
                       <td className="px-6 py-4 text-center font-black text-[#58CC02] text-[11px]">{entry.horimetro}</td>
                       <td className="px-6 py-4">
-                        <span className="text-[8px] font-black bg-green-50 text-green-600 px-2 py-0.5 rounded-md uppercase border border-green-100">{entry.fuel_name}</span>
+                        <span className="text-[8px] font-black bg-green-50 text-green-600 px-2 py-0.5 rounded-md uppercase border border-green-100">{entry.fuel_name || entry.fuel_type_id}</span>
                       </td>
                       <td className="px-6 py-4 text-center font-black text-[#0A2540] text-xs">{entry.quantity} L</td>
                       <td className="px-6 py-4 font-bold text-slate-400 text-[10px] truncate max-w-[100px]">{entry.user_name || 'Admin'}</td>
@@ -263,7 +271,7 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({
                       <td className="px-6 py-4 text-center font-black text-[#FFA500] text-[11px]">{entry.km}</td>
                       <td className="px-6 py-4 text-center font-black text-[#FFA500] text-[11px]">{entry.horimetro}</td>
                       <td className="px-6 py-4">
-                        <span className="text-[8px] font-black bg-orange-50 text-orange-600 px-2 py-0.5 rounded-md uppercase border border-orange-100">{entry.lubricant_name}</span>
+                        <span className="text-[8px] font-black bg-orange-50 text-orange-600 px-2 py-0.5 rounded-md uppercase border border-orange-100">{entry.lubricant_name || entry.lubricant_type_id}</span>
                       </td>
                       <td className="px-6 py-4 text-center font-black text-[#0A2540] text-xs">{entry.quantity} L/Kg</td>
                       <td className="px-6 py-4 font-bold text-slate-400 text-[10px] truncate max-w-[100px]">{entry.user_name || 'Admin'}</td>

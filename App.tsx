@@ -32,40 +32,38 @@ const App: React.FC = () => {
   const fetchData = useCallback(async () => {
     if (!navigator.onLine) return;
     try {
-      const [eRes, rRes, lRes, mRes] = await Promise.all([
-        supabase.from('checklist_entries').select('*').order('created_at', { ascending: false }),
-        supabase.from('refueling_entries').select('*'),
-        supabase.from('lubricant_entries').select('*'),
-        supabase.from('maintenance_sessions').select('*')
-      ]);
+      const { data: checklists } = await supabase.from('checklist_entries').select('*').order('created_at', { ascending: false });
+      const { data: refueling } = await supabase.from('refueling_entries').select('*');
+      const { data: lubricants } = await supabase.from('lubricant_entries').select('*');
+      const { data: maintenance } = await supabase.from('maintenance_sessions').select('*');
 
-      if (eRes.data) setEntries(eRes.data as ChecklistEntry[]);
-      if (rRes.data) setRefuelingEntries(rRes.data as RefuelingEntry[]);
-      if (lRes.data) setLubricantEntries(lRes.data as LubricantEntry[]);
-      if (mRes.data) setMaintenanceSessions(mRes.data as MaintenanceSession[]);
+      if (checklists) setEntries(checklists as ChecklistEntry[]);
+      if (refueling) setRefuelingEntries(refueling as RefuelingEntry[]);
+      if (lubricants) setLubricantEntries(lubricants as LubricantEntry[]);
+      if (maintenance) setMaintenanceSessions(maintenance as MaintenanceSession[]);
     } catch (err) {
-      console.error('Erro ao buscar dados:', err);
+      console.error('Erro ao buscar dados do Dashboard:', err);
     }
   }, []);
 
-  const initAppData = async () => {
+  const initAppData = useCallback(async () => {
     setIsLoading(true);
     try {
       if (navigator.onLine) {
-        const [vRes, iRes, uRes] = await Promise.all([
-          supabase.from('vehicles').select('*').order('prefix', { ascending: true }),
-          supabase.from('checklist_items').select('*').order('id', { ascending: true }),
-          supabase.from('users').select('*')
-        ]);
-        
+        // Busca independente para evitar que falha em uma tabela bloqueie as outras (ex: RLS na tabela users)
+        const vRes = await supabase.from('vehicles').select('*').order('prefix', { ascending: true });
         if (vRes.data) {
           setVehicles(vRes.data);
           await saveMetadata('vehicles', vRes.data);
         }
+
+        const iRes = await supabase.from('checklist_items').select('*').order('id', { ascending: true });
         if (iRes.data) {
           setChecklistItems(iRes.data);
           await saveMetadata('checklist_items', iRes.data);
         }
+
+        const uRes = await supabase.from('users').select('*');
         if (uRes.data) {
           setUsers(uRes.data as User[]);
           await saveMetadata('users', uRes.data);
@@ -79,21 +77,28 @@ const App: React.FC = () => {
         if (cachedUsers) setUsers(cachedUsers);
       }
     } catch (err) {
-      console.error('Erro ao inicializar dados:', err);
+      console.error('Erro ao inicializar dados mestres:', err);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    initAppData();
   }, []);
 
   useEffect(() => {
-    if (user) fetchData();
-  }, [user, fetchData]);
+    initAppData();
+  }, [initAppData]);
 
-  const handleLogin = (userData: User) => setUser(userData);
+  useEffect(() => {
+    if (user) {
+      fetchData();
+      initAppData(); // Força recarregamento após login para garantir permissões
+    }
+  }, [user, fetchData, initAppData]);
+
+  const handleLogin = (userData: User) => {
+    setUser(userData);
+    initAppData(); // Tenta carregar veículos imediatamente após login
+  };
+
   const handleLogout = () => { setUser(null); setView('dashboard'); };
 
   const handleSubmitEntry = async (entry: ChecklistEntry) => {
@@ -137,7 +142,6 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-[#020617] text-white shadow-lg sticky top-0 z-50 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
-          {/* Logo atualizado para respeitar a identidade visual (FLEET azul e LOG cinza) */}
           <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { setView('dashboard'); setSelectedMaintId(null); }}>
             <div className="flex items-baseline bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-800">
               <span className="font-black text-lg sm:text-xl tracking-tighter text-[#00548b]">FLEET</span>
