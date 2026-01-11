@@ -48,8 +48,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      // Busca o usuário. Filtramos por 'active' apenas se a coluna existir no banco.
-      // O erro anterior confirmou que a coluna não existia.
+      // Busca o usuário na tabela pública
       const { data, error: dbError } = await supabase
         .from('users')
         .select('*')
@@ -58,8 +57,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         .maybeSingle();
 
       if (dbError) {
-        if (dbError.message.includes('column users.active')) {
-          throw new Error('Erro de sistema: A coluna "active" está ausente no banco. Por favor, execute o script SQL de atualização.');
+        if (dbError.message.includes('recursion')) {
+          throw new Error('Erro de segurança no banco de dados (Recursão). Por favor, execute o script SQL de correção fornecido.');
         }
         throw dbError;
       }
@@ -175,7 +174,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <span className="text-[10px] font-black uppercase tracking-widest">Baixar App Corporativo</span>
             </button>
             <div className="flex items-center gap-4">
-              <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">v6.1.0 Business</span>
+              <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">v6.2.0 Business</span>
               <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
               <span className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">SSL Secure</span>
             </div>
