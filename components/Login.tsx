@@ -78,48 +78,44 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-rajdhani">
-      {/* Tech Background Elements */}
-      <div className="absolute inset-0 grid-bg opacity-20 pointer-events-none"></div>
-      <div className="animate-scan pointer-events-none"></div>
       
-      {/* Background Decor Lights */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      {/* Imagem de Fundo (Frota) com Transparência Alta */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=2070&auto=format&fit=crop" 
+          alt="Frota de Caminhões" 
+          className="w-full h-full object-cover opacity-[0.08] grayscale"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/50 via-transparent to-[#020617]"></div>
+      </div>
 
+      {/* Elementos Tech de Fundo */}
+      <div className="absolute inset-0 grid-bg opacity-10 pointer-events-none"></div>
+      
       <div className="max-w-md w-full relative z-10 animate-in fade-in zoom-in-95 duration-700">
-        <div className="bg-[#0f172a]/80 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-800/50">
+        <div className="bg-[#0f172a]/90 backdrop-blur-2xl rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_80px_rgba(0,0,0,0.6)] border border-slate-800/50">
           
           <div className="flex flex-col items-center mb-10 text-center">
-            <div className="w-20 h-20 bg-slate-900 border-2 border-cyan-500/30 rounded-3xl flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.15)] mb-6 overflow-hidden relative group">
-               <div className="absolute inset-0 bg-cyan-500/5 group-hover:bg-cyan-500/10 transition-colors"></div>
-               <svg className="w-10 h-10 text-cyan-400 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-               </svg>
+            {/* Logo Estilizado conforme Foto 1 */}
+            <div className="mb-2">
+              <h1 className="text-4xl font-black tracking-tighter flex items-baseline">
+                <span className="text-[#00548b]">FLEET</span>
+                <span className="text-[#425466]">LOG</span>
+              </h1>
             </div>
-            
-            <h1 className="text-3xl font-black text-white tracking-tighter font-tech">
-              FLEET<span className="text-cyan-400">LOG</span>
-            </h1>
-            <p className="text-slate-500 font-bold text-[9px] uppercase tracking-[0.4em] mt-1">Enterprise Resource Planning</p>
-            
-            {/* Solicited Phrase */}
-            <div className="mt-6 px-4">
-              <p className="text-slate-300 font-medium text-xs sm:text-sm leading-relaxed border-l-2 border-cyan-500/50 pl-4 text-left italic">
-                "Aqui começam os dados da sua frota, controle operacional inteligente em tempo real."
-              </p>
-            </div>
+            <p className="text-slate-500 font-bold text-[9px] uppercase tracking-[0.4em]">Gestão de Recursos de Frota</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest ml-1">Identity Terminal</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identificação de Acesso</label>
               <div className="relative">
                 <input 
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-6 py-4 bg-slate-900/50 border-2 border-slate-800 rounded-2xl focus:border-cyan-500/50 focus:bg-slate-900 outline-none transition-all text-white font-bold placeholder:text-slate-700 font-tech text-xs"
-                  placeholder="USERNAME"
+                  className="w-full px-6 py-4 bg-slate-900/40 border-2 border-slate-800/50 rounded-2xl focus:border-[#00548b] focus:bg-slate-900 outline-none transition-all text-white font-bold placeholder:text-slate-700 text-xs tracking-wider"
+                  placeholder="USUÁRIO"
                   autoComplete="username"
                   required
                 />
@@ -127,21 +123,21 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-cyan-500/60 uppercase tracking-widest ml-1">Access Token</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha de Acesso</label>
               <div className="relative">
                 <input 
                   type={showPassword ? "text" : "password"} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-6 py-4 bg-slate-900/50 border-2 border-slate-800 rounded-2xl focus:border-cyan-500/50 focus:bg-slate-900 outline-none transition-all text-white font-bold placeholder:text-slate-700 font-tech text-xs"
-                  placeholder="PASSWORD"
+                  className="w-full px-6 py-4 bg-slate-900/40 border-2 border-slate-800/50 rounded-2xl focus:border-[#00548b] focus:bg-slate-900 outline-none transition-all text-white font-bold placeholder:text-slate-700 text-xs tracking-wider"
+                  placeholder="SENHA"
                   autoComplete="current-password"
                   required
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-cyan-400 transition-colors"
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-[#00548b] transition-colors"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -162,13 +158,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <button 
               disabled={loading}
               type="submit"
-              className="w-full py-5 bg-cyan-500 text-[#020617] font-black rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:bg-cyan-400 active:scale-[0.98] transition-all text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 disabled:opacity-50 font-tech"
+              className="w-full py-5 bg-[#00548b] text-white font-black rounded-2xl shadow-[0_15px_30px_rgba(0,84,139,0.3)] hover:bg-[#00436e] active:scale-[0.98] transition-all text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 disabled:opacity-50"
             >
               {loading ? (
                 <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               ) : (
                 <>
-                  <span>INITIALIZE SYSTEM</span>
+                  <span>ACESSAR SISTEMA</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </>
               )}
@@ -176,17 +172,24 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </form>
 
           <div className="mt-12 pt-8 border-t border-slate-800/50 flex flex-col items-center gap-6">
+             {/* Frase Solicitada no Rodapé do Card */}
+            <div className="px-2">
+              <p className="text-slate-400 font-medium text-[10px] sm:text-[11px] leading-relaxed text-center italic opacity-80">
+                "Aqui começam os dados da sua frota, controle operacional inteligente em tempo real."
+              </p>
+            </div>
+
              <button 
               onClick={handleInstall}
-              className="flex items-center gap-3 text-slate-500 hover:text-cyan-400 transition-colors"
+              className="flex items-center gap-3 text-slate-500 hover:text-[#00548b] transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span className="text-[10px] font-black uppercase tracking-widest">Deploy Corporate App</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">Baixar App Corporativo</span>
             </button>
             <div className="flex items-center gap-4">
-              <span className="text-[8px] text-slate-600 font-bold uppercase tracking-[0.4em]">v7.0.0 Business</span>
+              <span className="text-[8px] text-slate-600 font-bold uppercase tracking-[0.4em]">v7.0.0 Corporativo</span>
               <span className="w-1 h-1 bg-slate-800 rounded-full"></span>
-              <span className="text-[8px] text-slate-600 font-bold uppercase tracking-[0.4em]">Quantum SSL</span>
+              <span className="text-[8px] text-slate-600 font-bold uppercase tracking-[0.4em]">Conexão Segura SSL</span>
             </div>
           </div>
         </div>
