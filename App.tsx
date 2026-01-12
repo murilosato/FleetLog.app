@@ -14,13 +14,11 @@ import HistoryPortal from './components/HistoryPortal';
 import AdminPanel from './components/AdminPanel';
 import ReportsView from './components/ReportsView';
 import { supabase } from './lib/supabase';
-import { saveOfflineEntry, saveMetadata, getMetadata } from './lib/db';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<'dashboard' | 'form' | 'refueling' | 'lubricant' | 'service_order' | 'maintenance_timer' | 'history_portal' | 'history_checklists' | 'history_records' | 'admin' | 'reports'>('dashboard');
   const [initialRecordTab, setInitialRecordTab] = useState<'refueling' | 'lubricant' | 'maintenance' | 'service_order'>('refueling');
-  const [selectedMaintId, setSelectedMaintId] = useState<string | null>(null);
   const [osInitialData, setOsInitialData] = useState<{vehicle_id?: string, km?: number, hor?: number, description?: string}>({});
   
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
@@ -31,21 +29,22 @@ const App: React.FC = () => {
   const [checklistItems, setChecklistItems] = useState<DBChecklistItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [dbError, setDbError] = useState<string | null>(null);
   
   const fetchData = useCallback(async () => {
     if (!navigator.onLine) return;
     try {
       const today = new Date().toISOString().split('T')[0];
-      const { data: checklists } = await supabase.from('checklist_entries').select('*').gte('date', today).order('created_at', { ascending: false });
-      const { data: refueling } = await supabase.from('refueling_entries').select('*').gte('event_at', today);
-      const { data: lubricants } = await supabase.from('lubricant_entries').select('*').gte('event_at', today);
-      const { data: maintenance } = await supabase.from('maintenance_sessions').select('*').neq('status', 'FINISHED');
+      const [checkRes, refRes, lubRes, maintRes] = await Promise.all([
+        supabase.from('checklist_entries').select('*').gte('date', today).order('created_at', { ascending: false }),
+        supabase.from('refueling_entries').select('*').gte('event_at', today),
+        supabase.from('lubricant_entries').select('*').gte('event_at', today),
+        supabase.from('maintenance_sessions').select('*').neq('status', 'FINISHED')
+      ]);
 
-      if (checklists) setEntries(checklists as ChecklistEntry[]);
-      if (refueling) setRefuelingEntries(refueling as RefuelingEntry[]);
-      if (lubricants) setLubricantEntries(lubricants as LubricantEntry[]);
-      if (maintenance) setMaintenanceSessions(maintenance as MaintenanceSession[]);
+      if (checkRes.data) setEntries(checkRes.data as ChecklistEntry[]);
+      if (refRes.data) setRefuelingEntries(refRes.data as RefuelingEntry[]);
+      if (lubRes.data) setLubricantEntries(lubRes.data as LubricantEntry[]);
+      if (maintRes.data) setMaintenanceSessions(maintRes.data as MaintenanceSession[]);
     } catch (err) {
       console.error('Erro ao buscar dados do Dashboard:', err);
     }
@@ -65,7 +64,7 @@ const App: React.FC = () => {
         if (uRes.data) setUsers(uRes.data as User[]);
       }
     } catch (err: any) {
-      setDbError(err.message);
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -115,21 +114,29 @@ const App: React.FC = () => {
               <span className="text-[#425466]">LOG</span>
             </h1>
           </div>
-          <nav className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-            <button onClick={() => setView('dashboard')} className={`px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest ${view === 'dashboard' ? 'bg-[#00548b]' : 'opacity-60'}`}>Painel</button>
-            <button onClick={() => setView('history_portal')} className={`px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest ${view.includes('history') ? 'bg-[#00548b]' : 'opacity-60'}`}>Registros</button>
-            <button onClick={() => setView('reports')} className={`px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest ${view === 'reports' ? 'bg-[#00548b]' : 'opacity-60'}`}>Analytics</button>
+          
+          <nav className="hidden md:flex items-center gap-4">
+            <button onClick={() => setView('dashboard')} className={`px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider ${view === 'dashboard' ? 'bg-[#00548b]' : 'opacity-60 hover:opacity-100'}`}>Painel</button>
+            <button onClick={() => setView('history_portal')} className={`px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider ${view.includes('history') ? 'bg-[#00548b]' : 'opacity-60 hover:opacity-100'}`}>Registros</button>
+            <button onClick={() => setView('reports')} className={`px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider ${view === 'reports' ? 'bg-[#00548b]' : 'opacity-60 hover:opacity-100'}`}>Analytics</button>
             {user.role === 'ADMIN' && (
-              <button onClick={() => setView('admin')} className={`px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest ${view === 'admin' ? 'bg-[#00548b]' : 'opacity-60'}`}>Gestão</button>
+              <button onClick={() => setView('admin')} className={`px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider ${view === 'admin' ? 'bg-[#00548b]' : 'opacity-60 hover:opacity-100'}`}>Gestão</button>
             )}
           </nav>
-          <button onClick={() => setUser(null)} className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl">
-             <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
+
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block border-r border-slate-800 pr-4">
+               <p className="text-[10px] font-black text-[#00548b] uppercase leading-none mb-1">{user.role}</p>
+               <p className="text-xs font-bold text-slate-300 leading-none">{user.name}</p>
+            </div>
+            <button onClick={() => setUser(null)} className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-red-900 transition-colors">
+               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 pb-24">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 pb-24">
         {view === 'dashboard' && (
           <Dashboard 
             submissions={entries} refuelings={refuelingEntries} lubricants={lubricantEntries} maintenances={maintenanceSessions}
