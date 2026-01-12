@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Vehicle, DBChecklistItem, FuelType, LubricantType, User } from '../types';
+import { Vehicle, DBChecklistItem, User, FuelType, LubricantType } from '../types';
 import { supabase } from '../lib/supabase';
 
 interface AdminPanelProps {
@@ -11,21 +11,34 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onBack }) => {
-  const [tab, setTab] = useState<'vehicles' | 'items' | 'fuels' | 'lubricants' | 'users'>('vehicles');
+  const [tab, setTab] = useState<'vehicles' | 'items' | 'fuels' | 'users'>('vehicles');
   const [loading, setLoading] = useState(false);
   const [dbUsers, setDbUsers] = useState<User[]>([]);
+  const [fuelTypes, setFuelTypes] = useState<FuelType[]>([]);
+  const [lubricantTypes, setLubricantTypes] = useState<LubricantType[]>([]);
   const [editingId, setEditingId] = useState<any>(null);
   const [editData, setEditData] = useState<any>({});
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (tab === 'users') fetchUsers();
+    if (tab === 'fuels') fetchInsumos();
   }, [tab]);
 
   const fetchUsers = async () => {
     setLoading(true);
     const { data } = await supabase.from('users').select('*').order('name');
     if (data) setDbUsers(data as User[]);
+    setLoading(false);
+  };
+
+  const fetchInsumos = async () => {
+    setLoading(true);
+    const [fRes, lRes] = await Promise.all([
+      supabase.from('fuel_types').select('*').order('name'),
+      supabase.from('lubricant_types').select('*').order('name')
+    ]);
+    if (fRes.data) setFuelTypes(fRes.data);
+    if (lRes.data) setLubricantTypes(lRes.data);
     setLoading(false);
   };
 
@@ -53,6 +66,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
     const { error } = await supabase.from(table).update({ active: !currentState }).eq('id', id);
     if (!error) {
       if (table === 'users') fetchUsers();
+      else if (table === 'fuel_types' || table === 'lubricant_types') fetchInsumos();
       else onRefresh();
     }
   };
@@ -122,8 +136,101 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
       )}
 
       {tab === 'vehicles' && (
-        <div className="p-10 bg-white rounded-[3rem] text-center border-4 border-dashed border-slate-100 text-slate-300 font-black uppercase tracking-widest">
-           Use o formulário existente para gerenciar a Frota.
+        <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
+           <table className="w-full text-left">
+              <thead>
+                 <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="px-8 py-6">Prefixo / Placa</th>
+                    <th className="px-8 py-6">KM Atual</th>
+                    <th className="px-8 py-6">Status</th>
+                    <th className="px-8 py-6 text-right">Ações</th>
+                 </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                 {vehicles.map(v => (
+                   <tr key={v.id} className={`hover:bg-slate-50 transition-colors ${!v.active ? 'opacity-40' : ''}`}>
+                      <td className="px-8 py-5">
+                         <p className="font-black text-[#0A2540] text-sm">{v.prefix}</p>
+                         <p className="text-[9px] font-bold text-slate-400 uppercase">{v.plate}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                         <p className="font-tech font-bold text-slate-600">{v.current_km} KM</p>
+                         <p className="text-[8px] font-bold text-slate-300 uppercase">HOR: {v.current_horimetro}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                         <span className={`text-[8px] font-black px-2 py-1 rounded-lg uppercase ${v.active ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{v.active ? 'Ativo' : 'Inativo'}</span>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                         <button onClick={() => handleToggleStatus('vehicles', v.id, v.active)} className={`text-[9px] font-black px-4 py-2 rounded-xl transition-all ${v.active ? 'bg-slate-50 text-red-600' : 'bg-green-600 text-white'}`}>{v.active ? 'Desativar' : 'Ativar'}</button>
+                      </td>
+                   </tr>
+                 ))}
+              </tbody>
+           </table>
+        </div>
+      )}
+
+      {tab === 'items' && (
+        <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
+           <table className="w-full text-left">
+              <thead>
+                 <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="px-8 py-6">Item de Inspeção</th>
+                    <th className="px-8 py-6">Categoria</th>
+                    <th className="px-8 py-6 text-right">Ações</th>
+                 </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                 {items.map(i => (
+                   <tr key={i.id} className={`hover:bg-slate-50 transition-colors ${i.active === false ? 'opacity-40' : ''}`}>
+                      <td className="px-8 py-5">
+                         <p className="font-black text-[#0A2540] text-sm">[{i.id}] {i.label}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                         <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded-lg uppercase">{i.category}</span>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                         <button onClick={() => handleToggleStatus('checklist_items', i.id, i.active !== false)} className={`text-[9px] font-black px-4 py-2 rounded-xl transition-all ${i.active !== false ? 'bg-slate-50 text-red-600' : 'bg-green-600 text-white'}`}>{i.active !== false ? 'Ocultar' : 'Mostrar'}</button>
+                      </td>
+                   </tr>
+                 ))}
+              </tbody>
+           </table>
+        </div>
+      )}
+
+      {tab === 'fuels' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+           <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
+              <h4 className="p-8 pb-4 font-black text-[#0A2540] text-lg uppercase">Combustíveis</h4>
+              <table className="w-full text-left">
+                 <tbody className="divide-y divide-slate-50">
+                    {fuelTypes.map(f => (
+                      <tr key={f.id} className={`hover:bg-slate-50 transition-colors ${!f.active ? 'opacity-40' : ''}`}>
+                         <td className="px-8 py-4 font-black text-[#0A2540] text-xs uppercase">{f.name}</td>
+                         <td className="px-8 py-4 text-right">
+                            <button onClick={() => handleToggleStatus('fuel_types', f.id, f.active)} className={`text-[8px] font-black px-3 py-1.5 rounded-lg transition-all ${f.active ? 'bg-slate-50 text-red-600' : 'bg-green-600 text-white'}`}>{f.active ? 'Desativar' : 'Ativar'}</button>
+                         </td>
+                      </tr>
+                    ))}
+                 </tbody>
+              </table>
+           </div>
+           <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
+              <h4 className="p-8 pb-4 font-black text-[#0A2540] text-lg uppercase">Lubrificantes</h4>
+              <table className="w-full text-left">
+                 <tbody className="divide-y divide-slate-50">
+                    {lubricantTypes.map(l => (
+                      <tr key={l.id} className={`hover:bg-slate-50 transition-colors ${!l.active ? 'opacity-40' : ''}`}>
+                         <td className="px-8 py-4 font-black text-[#0A2540] text-xs uppercase">{l.name}</td>
+                         <td className="px-8 py-4 text-right">
+                            <button onClick={() => handleToggleStatus('lubricant_types', l.id, l.active)} className={`text-[8px] font-black px-3 py-1.5 rounded-lg transition-all ${l.active ? 'bg-slate-50 text-red-600' : 'bg-green-600 text-white'}`}>{l.active ? 'Desativar' : 'Ativar'}</button>
+                         </td>
+                      </tr>
+                    ))}
+                 </tbody>
+              </table>
+           </div>
         </div>
       )}
     </div>
