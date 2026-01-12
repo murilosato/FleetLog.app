@@ -27,15 +27,16 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
     const end = `${endDate}T23:59:59`;
     try {
       if (reportType === 'checklists') {
-        const { data } = await supabase.from('checklist_entries').select('*').gte('date', startDate).lte('date', endDate);
+        const { data } = await supabase.from('checklist_entries').select('*').gte('date', startDate).lte('date', endDate).order('created_at', { ascending: true });
         const sortedItems = [...availableItems].sort((a,b) => a.id - b.id);
         const headers = ['Controle', 'Data', 'Veiculo', 'Turno', 'Tipo', 'Motorista', 'KM', 'HOR', 'Tem Falha?', 'Obs Geral'];
         sortedItems.forEach(i => { 
           headers.push(`[${i.id.toString().padStart(2, '0')}] ${i.label}`); 
           headers.push(`[${i.id.toString().padStart(2, '0')}] OBS`); 
         });
-        const rows = data?.map(s => {
-          const base = [`CTR-${s.id.substring(0,5).toUpperCase()}`, s.date, s.prefix, s.shift, s.type, s.driver_name, s.km, s.horimetro, s.has_issues ? 'SIM' : 'NAO', s.general_observations || ''];
+        const rows = data?.map((s, idx) => {
+          const controlNum = (idx + 1).toString().padStart(5, '0');
+          const base = [controlNum, s.date, s.prefix, s.shift, s.type, s.driver_name, s.km, s.horimetro, s.has_issues ? 'SIM' : 'NAO', s.general_observations || ''];
           sortedItems.forEach(i => { 
             const r = s.items?.[i.id] || s.items?.[i.id.toString()]; 
             base.push(r?.status || '-'); base.push(r?.observations || ''); 
@@ -44,29 +45,29 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
         });
         downloadCSV('Relatorio_Checklist', headers, rows || []);
       } else if (reportType === 'fuels') {
-        const { data } = await supabase.from('refueling_entries').select('*, fuel_types(name), users(name)').gte('event_at', start).lte('event_at', end);
+        const { data } = await supabase.from('refueling_entries').select('*, fuel_types(name), users(name)').gte('event_at', start).lte('event_at', end).order('event_at', { ascending: true });
         const headers = ['Controle', 'Data', 'Veículo', 'Responsável', 'KM', 'HOR', 'Combustível', 'Qtd (L)', 'ARLA (L)'];
-        const rows = data?.map(r => [`CTR-${r.id.substring(0,5).toUpperCase()}`, new Date(r.event_at).toLocaleString(), r.prefix, r.users?.name, r.km, r.horimetro, r.fuel_types?.name, r.quantity, r.arla_quantity || 0]);
+        const rows = data?.map((r, idx) => [(idx + 1).toString().padStart(5, '0'), new Date(r.event_at).toLocaleString(), r.prefix, r.users?.name, r.km, r.horimetro, r.fuel_types?.name, r.quantity, r.arla_quantity || 0]);
         downloadCSV('Relatorio_Abastecimento', headers, rows || []);
       } else if (reportType === 'lubricants') {
-        const { data } = await supabase.from('lubricant_entries').select('*, lubricant_types(name), users(name)').gte('event_at', start).lte('event_at', end);
+        const { data } = await supabase.from('lubricant_entries').select('*, lubricant_types(name), users(name)').gte('event_at', start).lte('event_at', end).order('event_at', { ascending: true });
         const headers = ['Controle', 'Data', 'Veículo', 'Responsável', 'KM', 'HOR', 'Insumo', 'Qtd'];
-        const rows = data?.map(l => [`CTR-${l.id.substring(0,5).toUpperCase()}`, new Date(l.event_at).toLocaleString(), l.prefix, l.users?.name, l.km, l.horimetro, l.lubricant_types?.name, l.quantity]);
+        const rows = data?.map((l, idx) => [(idx + 1).toString().padStart(5, '0'), new Date(l.event_at).toLocaleString(), l.prefix, l.users?.name, l.km, l.horimetro, l.lubricant_types?.name, l.quantity]);
         downloadCSV('Relatorio_Lubrificantes', headers, rows || []);
       } else if (reportType === 'maintenance_sessions') {
-        const { data } = await supabase.from('maintenance_sessions').select('*, users(name)').gte('start_time', start).lte('start_time', end);
+        const { data } = await supabase.from('maintenance_sessions').select('*, users(name)').gte('start_time', start).lte('start_time', end).order('start_time', { ascending: true });
         const headers = ['Controle', 'Inicio', 'Fim', 'Veiculo', 'Mecanico', 'Motivo', 'Tempo Efetivo (Segundos)', 'Status'];
-        const rows = data?.map(m => [`CTR-${m.id.substring(0,5).toUpperCase()}`, m.start_time, m.end_time || '-', m.prefix, m.users?.name || '-', m.opening_reason, m.total_effective_seconds || 0, m.status]);
-        downloadCSV('Relatorio_Oficina_Tempo_Efetivo', headers, rows || []);
+        const rows = data?.map((m, idx) => [(idx + 1).toString().padStart(5, '0'), m.start_time, m.end_time || '-', m.prefix, m.users?.name || '-', m.opening_reason, m.total_effective_seconds || 0, m.status]);
+        downloadCSV('Relatorio_Oficina_Sessoes', headers, rows || []);
       } else if (reportType === 'maintenance_pauses') {
         const { data } = await supabase.from('maintenance_pauses').select('*, maintenance_sessions(prefix)').gte('pause_start', start).lte('pause_start', end);
-        const headers = ['Controle Cronom.', 'Veiculo', 'Motivo da Parada', 'Inicio Pausa', 'Fim Pausa', 'Tempo (Segundos)'];
-        const rows = data?.map(p => [`CTR-${p.session_id.substring(0,5).toUpperCase()}`, p.maintenance_sessions?.prefix || '-', p.reason, p.pause_start, p.pause_end || '-', p.pause_end ? Math.floor((new Date(p.pause_end).getTime() - new Date(p.pause_start).getTime()) / 1000) : 0]);
+        const headers = ['Controle Pausa', 'Veiculo', 'Motivo da Parada', 'Inicio Pausa', 'Fim Pausa', 'Tempo (Segundos)'];
+        const rows = data?.map((p, idx) => [(idx + 1).toString().padStart(5, '0'), p.maintenance_sessions?.prefix || '-', p.reason, p.pause_start, p.pause_end || '-', p.pause_end ? Math.floor((new Date(p.pause_end).getTime() - new Date(p.pause_start).getTime()) / 1000) : 0]);
         downloadCSV('Relatorio_Oficina_Paradas', headers, rows || []);
       } else if (reportType === 'service_order') {
-        const { data } = await supabase.from('service_orders').select('*, users(name)').gte('created_at', start).lte('created_at', end);
-        const headers = ['Controle', 'Data', 'Nº OS', 'Veiculo', 'Abertura', 'Motivo', 'KM', 'HOR', 'Status', 'Obs. Fechamento', 'Fechado por'];
-        const rows = data?.map(o => [`CTR-${o.id.substring(0,5).toUpperCase()}`, new Date(o.created_at).toLocaleString(), o.os_number, o.prefix, o.users?.name, o.description, o.km, o.horimetro, o.status, o.closing_observations || '', o.closed_by || '']);
+        const { data } = await supabase.from('service_orders').select('*, users(name)').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: true });
+        const headers = ['Controle', 'Data', 'Nº OS', 'Veiculo', 'Abertura', 'Motivo', 'KM', 'HOR', 'Status', 'Obs. Fechamento'];
+        const rows = data?.map((o, idx) => [(idx + 1).toString().padStart(5, '0'), new Date(o.created_at).toLocaleString(), o.os_number, o.prefix, o.users?.name, o.description, o.km, o.horimetro, o.status, o.closing_observations || '']);
         downloadCSV('Relatorio_OS', headers, rows || []);
       }
     } catch (err) { console.error(err); } finally { setLoading(false); }
@@ -74,7 +75,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
-      <div className="bg-white p-8 rounded-[3.5rem] shadow-sm border border-slate-100 flex items-center justify-between">
+      <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 flex items-center justify-between">
          <div className="flex items-center gap-6">
             <button onClick={onBack} className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all shadow-sm"><svg className="w-6 h-6 text-[#0A2540]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" strokeWidth="2.5"/></svg></button>
             <h2 className="text-2xl font-black text-[#0A2540] uppercase tracking-tight">Central Analítica</h2>
@@ -88,9 +89,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
             { id: 'checklists', label: 'Checklist', color: '#00548b' },
             { id: 'fuels', label: 'Abastec.', color: '#58CC02' },
             { id: 'lubricants', label: 'Lubrif.', color: '#FFA500' },
-            { id: 'maintenance_sessions', label: 'T. Efetivo', color: '#334155' },
-            { id: 'maintenance_pauses', label: 'Paradas', color: '#f97316' },
-            { id: 'service_order', label: 'O.S.', color: '#DC2626' }
+            { id: 'maintenance_sessions', label: 'Oficina (Sessão)', color: '#334155' },
+            { id: 'maintenance_pauses', label: 'Oficina (Parada)', color: '#f97316' },
+            { id: 'service_order', label: 'O.S. Frota', color: '#DC2626' }
           ].map(t => (
             <button key={t.id} onClick={() => setReportType(t.id as any)} className={`p-5 rounded-2xl border-2 font-bold text-[10px] uppercase tracking-widest transition-all ${reportType === t.id ? 'bg-slate-50 border-slate-900 shadow-lg' : 'bg-white border-slate-50 text-slate-400'}`}>
               <div className="w-2 h-2 rounded-full mb-2 mx-auto" style={{ backgroundColor: t.color }}></div>
