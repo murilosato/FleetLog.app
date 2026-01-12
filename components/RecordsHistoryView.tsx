@@ -72,12 +72,15 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
 
     setIsClosing(true);
     try {
-      // Nota: Removido 'closed_at' e 'closed_by' para evitar erro de coluna inexistente no Supabase do usuário
+      // Estratégia: Gravar o fechamento no campo description para evitar erro de coluna
+      const closingDate = new Date().toLocaleString('pt-BR');
+      const updatedDescription = `${closingOS.description}\n\n[LAUDO DE FECHAMENTO - ${closingDate} por ${currentUser?.name || 'Sistema'}]:\n${closingObs}`;
+
       const { error } = await supabase
         .from('service_orders')
         .update({ 
           status: 'CLOSED', 
-          closing_observations: closingObs
+          description: updatedDescription
         })
         .eq('id', closingOS.id);
 
@@ -109,9 +112,17 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
     }, 0);
   };
 
+  // Função para separar descrição original do laudo de fechamento
+  const parseDescription = (desc: string) => {
+    const parts = desc.split('[LAUDO DE FECHAMENTO');
+    return {
+      original: parts[0].trim(),
+      closing: parts.length > 1 ? '[LAUDO DE FECHAMENTO' + parts[1] : null
+    };
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20">
-      {/* Header Histórico Detalhado */}
       <div className="bg-white p-6 sm:p-8 rounded-[3rem] shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between gap-6">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all shadow-sm">
@@ -160,22 +171,21 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
                   {tab === 'refueling' && <>
                     <th className="px-6 py-6 text-right">KM</th>
                     <th className="px-6 py-6 text-right">Horímetro</th>
-                    <th className="px-6 py-6">Combustível</th>
+                    <th className="px-6 py-6">Insumo</th>
                     <th className="px-6 py-6 text-right">Qtd (L)</th>
                   </>}
                   {tab === 'lubricant' && <>
                     <th className="px-6 py-6 text-right">KM</th>
                     <th className="px-6 py-6 text-right">Horímetro</th>
-                    <th className="px-6 py-6">Lubrificante</th>
-                    <th className="px-6 py-6 text-right">Quantidade</th>
+                    <th className="px-6 py-6">Insumo</th>
+                    <th className="px-6 py-6 text-right">Qtd</th>
                   </>}
                   {tab === 'service_order' && <>
-                    <th className="px-6 py-6">Motivo da Abertura</th>
+                    <th className="px-6 py-6">Diagnóstico / Motivo</th>
                     <th className="px-6 py-6 text-center">Status</th>
-                    <th className="px-6 py-6 text-right">Controle O.S.</th>
+                    <th className="px-6 py-6 text-right">Ações</th>
                   </>}
                   {tab === 'maintenance' && <>
-                    <th className="px-6 py-6">Início</th>
                     <th className="px-6 py-6">Tempo Efetivo</th>
                     <th className="px-6 py-6">Tempo Parada</th>
                     <th className="px-6 py-6 text-center">Logs</th>
@@ -185,12 +195,14 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
               <tbody className="divide-y divide-slate-100">
                 {data.map((item, index) => {
                   const isMaintenance = tab === 'maintenance';
+                  const isOS = tab === 'service_order';
                   const isExpanded = expandedId === item.id;
                   const rowNumber = data.length - index;
+                  const parsedOS = isOS ? parseDescription(item.description) : null;
                   
                   return (
                     <React.Fragment key={item.id}>
-                      <tr className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50' : ''}`} onClick={() => (isMaintenance || tab === 'service_order') && setExpandedId(isExpanded ? null : item.id)}>
+                      <tr className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50' : ''}`} onClick={() => (isMaintenance || isOS) && setExpandedId(isExpanded ? null : item.id)}>
                         <td className="px-6 py-4">
                           <p className="text-xs font-bold text-[#0A2540]">{new Date(item.start_time || item.event_at || item.created_at).toLocaleDateString()}</p>
                           <p className="text-[9px] text-slate-400 font-bold uppercase">{new Date(item.start_time || item.event_at || item.created_at).toLocaleTimeString()}</p>
@@ -218,7 +230,7 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
                         </>}
 
                         {tab === 'service_order' && <>
-                          <td className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 truncate max-w-[200px]">{item.description}</td>
+                          <td className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 truncate max-w-[200px]">{parsedOS?.original}</td>
                           <td className="px-6 py-4 text-center">
                              <span className={`text-[8px] font-black px-2 py-1 rounded-lg uppercase ${item.status === 'CLOSED' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                                {item.status === 'CLOSED' ? 'FINALIZADA' : 'ABERTA'}
@@ -238,7 +250,6 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
                         </>}
 
                         {tab === 'maintenance' && <>
-                          <td className="px-6 py-4 font-tech text-[10px] text-slate-400">{new Date(item.start_time).toLocaleTimeString()}</td>
                           <td className="px-6 py-4 font-tech font-bold text-[#0A2540]">{item.total_effective_seconds ? formatDur(item.total_effective_seconds) : 'EM CURSO'}</td>
                           <td className="px-6 py-4 font-tech font-bold text-orange-500">{formatDur(calculateTotalPauseSecs(pauses[item.id]))}</td>
                           <td className="px-6 py-4 text-center">
@@ -273,18 +284,18 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
                           </td>
                         </tr>
                       )}
-                      {tab === 'service_order' && isExpanded && (
+                      {isOS && isExpanded && (
                         <tr className="bg-slate-50/40">
                           <td colSpan={8} className="px-10 py-6 border-l-4 border-red-600">
                              <div className="space-y-4">
                                 <div>
-                                   <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Motivo da Abertura</h5>
-                                   <p className="text-xs font-bold text-slate-700 bg-white p-4 rounded-xl border border-slate-100 italic">"{item.description}"</p>
+                                   <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Diagnóstico Inicial de Abertura</h5>
+                                   <p className="text-xs font-bold text-slate-700 bg-white p-4 rounded-xl border border-slate-100 italic">"{parsedOS?.original}"</p>
                                 </div>
-                                {item.status === 'CLOSED' && (
+                                {parsedOS?.closing && (
                                    <div className="animate-in fade-in slide-in-from-top-2">
-                                      <h5 className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Laudo de Fechamento</h5>
-                                      <p className="text-xs font-bold text-green-700 bg-green-50 p-4 rounded-xl border border-green-100 italic">"{item.closing_observations}"</p>
+                                      <h5 className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Laudo de Fechamento de O.S.</h5>
+                                      <p className="text-xs font-bold text-green-700 bg-green-50 p-4 rounded-xl border border-green-100 italic whitespace-pre-wrap">"{parsedOS.closing}"</p>
                                    </div>
                                 )}
                              </div>
@@ -303,7 +314,7 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
       {/* Modal de Fechamento de O.S. */}
       {closingOS && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#0A2540]/60 backdrop-blur-md">
-           <div className="bg-white p-8 rounded-[3rem] shadow-2xl max-w-lg w-full space-y-6 animate-in zoom-in-95">
+           <div className="bg-white p-8 rounded-[3rem] shadow-2xl max-w-lg w-full space-y-6 animate-in zoom-in-95 duration-200">
               <div className="flex items-center gap-4 border-b pb-4">
                  <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center font-black">OS</div>
                  <div>
