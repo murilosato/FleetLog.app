@@ -51,6 +51,9 @@ export interface ServiceOrder {
   created_at: string;
   user_id: string;
   user_name?: string;
+  closing_observations?: string;
+  closed_at?: string;
+  closed_by?: string;
 }
 
 export interface ServiceOrderLog {

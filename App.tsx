@@ -155,7 +155,7 @@ const App: React.FC = () => {
         {view === 'maintenance_timer' && <MaintenanceTimer user={user} vehicles={vehicles} onBack={() => setView('dashboard')} />}
         {view === 'history_portal' && <HistoryPortal onSelectChecklists={() => setView('history_checklists')} onSelectRefueling={() => { setInitialRecordTab('refueling'); setView('history_records'); }} onSelectLubricant={() => { setInitialRecordTab('lubricant'); setView('history_records'); }} onSelectMaintenance={() => { setInitialRecordTab('maintenance'); setView('history_records'); }} onSelectServiceOrder={() => { setInitialRecordTab('service_order'); setView('history_records'); }} onBack={() => setView('dashboard')} />}
         {view === 'history_checklists' && <HistoryView submissions={entries} user={user} users={users} availableItems={checklistItems} onBack={() => setView('history_portal')} onRefresh={fetchData} />}
-        {view === 'history_records' && <RecordsHistoryView onBack={() => setView('history_portal')} initialTab={initialRecordTab} />}
+        {view === 'history_records' && <RecordsHistoryView onBack={() => setView('history_portal')} initialTab={initialRecordTab} currentUser={user} />}
         {view === 'admin' && <AdminPanel vehicles={vehicles} items={checklistItems} onRefresh={initAppData} onBack={() => setView('dashboard')} />}
         {view === 'reports' && <ReportsView availableItems={checklistItems} onBack={() => setView('dashboard')} />}
       </main>
