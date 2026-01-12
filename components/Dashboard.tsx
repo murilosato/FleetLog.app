@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { ChecklistEntry, User, DBChecklistItem, RefuelingEntry, LubricantEntry, MaintenanceSession } from '../types';
 
 interface DashboardProps {
@@ -22,110 +22,77 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
-  submissions, refuelings, lubricants, maintenances, user,
-  onNewChecklist, onNewRefueling, onNewLubricant, onNewOS, onMaintenanceTimer, onViewHistory
+  user, onNewChecklist, onNewRefueling, onNewLubricant, onNewOS, onMaintenanceTimer, onViewHistory
 }) => {
-  const [dashboardDate, setDashboardDate] = useState(new Date().toISOString().split('T')[0]);
-
-  const inProgressMaint = useMemo(() => maintenances.filter(m => m.status !== 'FINISHED'), [maintenances]);
-
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-        <div>
-          <h2 className="text-2xl font-black text-[#0A2540]">Olá, <span className="text-[#00548b]">{user.name.split(' ')[0]}</span></h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gestão de Frota | {dashboardDate}</p>
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="text-center md:text-left">
+          <h2 className="text-3xl font-black text-[#0A2540] tracking-tight">CENTRAL <span className="text-[#00548b]">OPERACIONAL</span></h2>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em] mt-1">Olá, {user.name} | Gestão FleetLog</p>
         </div>
-        <div className="flex gap-2">
-           <button onClick={onNewChecklist} className="px-4 py-2.5 bg-[#0A2540] text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg">Novo Checklist</button>
-           <button onClick={onNewOS} className="px-4 py-2.5 bg-red-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg">Abrir O.S.</button>
+        <div className="flex items-center gap-4">
+           <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 font-black text-xs shadow-sm">FL</div>
+           <div className="h-10 w-px bg-slate-100 hidden md:block"></div>
+           <button onClick={onViewHistory} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-[#0A2540] transition-colors">Consultar Registros</button>
         </div>
       </div>
 
-      {inProgressMaint.length > 0 && (
-        <div className="bg-orange-50 border-2 border-orange-100 p-6 rounded-[2rem] space-y-4">
-           <h3 className="text-[10px] font-black text-orange-600 uppercase tracking-widest flex items-center gap-2">
-              <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-              Manutenções em Aberto ({inProgressMaint.length})
-           </h3>
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {inProgressMaint.map(m => (
-                <div key={m.id} className="bg-white p-4 rounded-2xl border border-orange-100 shadow-sm flex justify-between items-center">
-                   <div>
-                      <p className="text-lg font-black text-[#0A2540]">{m.prefix}</p>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">{m.status === 'ACTIVE' ? 'Trabalhando' : 'Pausado'}</p>
-                   </div>
-                   <button onClick={onMaintenanceTimer} className="text-[8px] font-black bg-orange-500 text-white px-3 py-1.5 rounded-lg uppercase">Gerenciar</button>
-                </div>
-              ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* CHECKLIST */}
+        <button onClick={onNewChecklist} className="bg-white p-10 rounded-[3rem] shadow-sm border-2 border-transparent hover:border-[#00548b] transition-all group flex flex-col items-center text-center space-y-6 active:scale-95">
+           <div className="w-20 h-20 bg-[#00548b] text-white rounded-[2rem] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
            </div>
-        </div>
-      )}
+           <div>
+              <h3 className="text-xl font-black text-[#0A2540] uppercase">Vistoria</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Checklist de Saída/Retorno</p>
+           </div>
+        </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Atividades de Hoje</h3>
-            <div className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
-               {submissions.length === 0 && refuelings.length === 0 && lubricants.length === 0 && (
-                 <div className="py-20 text-center opacity-30 font-black uppercase text-[10px]">Nenhuma atividade registrada hoje</div>
-               )}
-               <div className="divide-y divide-slate-50">
-                  {submissions.map(s => (
-                    <div key={s.id} className="p-5 flex justify-between items-center hover:bg-slate-50/50">
-                       <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-[10px]">VIS</div>
-                          <div>
-                             <p className="text-sm font-black text-[#0A2540]">{s.prefix}</p>
-                             <p className="text-[9px] font-bold text-slate-400 uppercase">Checklist {s.type} - {s.shift}</p>
-                          </div>
-                       </div>
-                       <span className={`text-[8px] font-black px-2 py-1 rounded-lg uppercase ${s.has_issues ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>{s.has_issues ? 'Com Falha' : 'OK'}</span>
-                    </div>
-                  ))}
-                  {refuelings.map(r => (
-                    <div key={r.id} className="p-5 flex justify-between items-center hover:bg-slate-50/50">
-                       <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center font-black text-[10px]">ABS</div>
-                          <div>
-                             <p className="text-sm font-black text-[#0A2540]">{r.prefix}</p>
-                             <p className="text-[9px] font-bold text-slate-400 uppercase">Abastecimento: {r.quantity}L</p>
-                          </div>
-                       </div>
-                       <p className="text-[10px] font-tech font-bold text-slate-400">{r.km} KM</p>
-                    </div>
-                  ))}
-                  {lubricants.map(l => (
-                    <div key={l.id} className="p-5 flex justify-between items-center hover:bg-slate-50/50">
-                       <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center font-black text-[10px]">LUB</div>
-                          <div>
-                             <p className="text-sm font-black text-[#0A2540]">{l.prefix}</p>
-                             <p className="text-[9px] font-bold text-slate-400 uppercase">Lubrificação: {l.quantity}</p>
-                          </div>
-                       </div>
-                       <p className="text-[10px] font-tech font-bold text-slate-400">{l.km} KM</p>
-                    </div>
-                  ))}
-               </div>
-            </div>
-         </div>
+        {/* ABASTECIMENTO */}
+        <button onClick={onNewRefueling} className="bg-white p-10 rounded-[3rem] shadow-sm border-2 border-transparent hover:border-[#58CC02] transition-all group flex flex-col items-center text-center space-y-6 active:scale-95">
+           <div className="w-20 h-20 bg-[#58CC02] text-white rounded-[2rem] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+           </div>
+           <div>
+              <h3 className="text-xl font-black text-[#0A2540] uppercase">Abastecer</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Combustível e ARLA 32</p>
+           </div>
+        </button>
 
-         <div className="space-y-4">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Métricas Rápidas</h3>
-            <div className="bg-[#0A2540] p-8 rounded-[2.5rem] text-white space-y-8 shadow-xl">
-               <div className="flex justify-between items-end border-b border-white/10 pb-6">
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-50">Vistorias</p>
-                    <p className="text-3xl font-black">{submissions.length}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-50">Combustível</p>
-                    <p className="text-3xl font-black">{refuelings.reduce((acc, r) => acc + r.quantity, 0).toFixed(0)}<span className="text-xs ml-1">L</span></p>
-                  </div>
-               </div>
-               <button onClick={onViewHistory} className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-white/10 transition-all">Relatórios Completos</button>
-            </div>
-         </div>
+        {/* LUBRIFICANTE */}
+        <button onClick={onNewLubricant} className="bg-white p-10 rounded-[3rem] shadow-sm border-2 border-transparent hover:border-[#FFA500] transition-all group flex flex-col items-center text-center space-y-6 active:scale-95">
+           <div className="w-20 h-20 bg-[#FFA500] text-white rounded-[2rem] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+           </div>
+           <div>
+              <h3 className="text-xl font-black text-[#0A2540] uppercase">Lubrif.</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Insumos e Fluidos</p>
+           </div>
+        </button>
+
+        {/* OFICINA */}
+        <button onClick={onMaintenanceTimer} className="bg-white p-10 rounded-[3rem] shadow-sm border-2 border-transparent hover:border-slate-800 transition-all group flex flex-col items-center text-center space-y-6 active:scale-95">
+           <div className="w-20 h-20 bg-slate-800 text-white rounded-[2rem] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+           </div>
+           <div>
+              <h3 className="text-xl font-black text-[#0A2540] uppercase">Oficina</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cronômetro de Manutenção</p>
+           </div>
+        </button>
+
+        {/* O.S. FROTA */}
+        <button onClick={onNewOS} className="bg-white p-10 rounded-[3rem] shadow-sm border-2 border-transparent hover:border-red-600 transition-all group flex flex-col items-center text-center space-y-6 active:scale-95">
+           <div className="w-20 h-20 bg-red-600 text-white rounded-[2rem] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+           </div>
+           <div>
+              <h3 className="text-xl font-black text-[#0A2540] uppercase">O.S. Frota</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Abertura de Ocorrência</p>
+           </div>
+        </button>
       </div>
     </div>
   );
