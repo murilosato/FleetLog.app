@@ -39,6 +39,32 @@ export interface DBChecklistItem {
   active?: boolean;
 }
 
+export interface ServiceOrder {
+  id: string;
+  os_number: number;
+  vehicle_id: string;
+  prefix: string;
+  km: number;
+  horimetro: number;
+  description: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
+  created_at: string;
+  user_id: string;
+  user_name?: string;
+}
+
+export interface ServiceOrderLog {
+  id: string;
+  os_id: string;
+  os_number: number;
+  action_description: string;
+  user_name: string;
+  vehicle_prefix: string;
+  km: number;
+  horimetro: number;
+  created_at: string;
+}
+
 export interface FuelType {
   id: number;
   name: string;

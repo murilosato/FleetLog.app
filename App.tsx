@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { User, ChecklistEntry, Vehicle, DBChecklistItem, RefuelingEntry, LubricantEntry, MaintenanceSession } from './types';
+import { User, ChecklistEntry, Vehicle, DBChecklistItem, RefuelingEntry, LubricantEntry, MaintenanceSession, ServiceOrder } from './types';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ChecklistForm from './components/ChecklistForm';
 import RefuelingForm from './components/RefuelingForm';
 import LubricantForm from './components/LubricantForm';
+import ServiceOrderForm from './components/ServiceOrderForm';
 import MaintenanceTimer from './components/MaintenanceTimer';
 import HistoryView from './components/HistoryView';
 import RecordsHistoryView from './components/RecordsHistoryView';
@@ -17,9 +18,11 @@ import { saveOfflineEntry, saveMetadata, getMetadata } from './lib/db';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<'dashboard' | 'form' | 'refueling' | 'lubricant' | 'maintenance_timer' | 'history_portal' | 'history_checklists' | 'history_records' | 'admin' | 'reports'>('dashboard');
-  const [initialRecordTab, setInitialRecordTab] = useState<'refueling' | 'lubricant' | 'maintenance'>('refueling');
+  const [view, setView] = useState<'dashboard' | 'form' | 'refueling' | 'lubricant' | 'service_order' | 'maintenance_timer' | 'history_portal' | 'history_checklists' | 'history_records' | 'admin' | 'reports'>('dashboard');
+  const [initialRecordTab, setInitialRecordTab] = useState<'refueling' | 'lubricant' | 'maintenance' | 'service_order'>('refueling');
   const [selectedMaintId, setSelectedMaintId] = useState<string | null>(null);
+  const [osInitialData, setOsInitialData] = useState<{vehicle_id?: string, km?: number, hor?: number, description?: string}>({});
+  
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
   const [refuelingEntries, setRefuelingEntries] = useState<RefuelingEntry[]>([]);
   const [lubricantEntries, setLubricantEntries] = useState<LubricantEntry[]>([]);
@@ -107,6 +110,11 @@ const App: React.FC = () => {
 
   const handleLogout = () => { setUser(null); setView('dashboard'); };
 
+  const handleOpenOS = (data: {vehicle_id?: string, km?: number, hor?: number, description?: string}) => {
+    setOsInitialData(data);
+    setView('service_order');
+  };
+
   const handleSubmitEntry = async (entry: ChecklistEntry) => {
     if (!navigator.onLine) {
       await saveOfflineEntry(entry);
@@ -121,6 +129,18 @@ const App: React.FC = () => {
       await supabase.from('vehicles').update({ current_km: entry.km, current_horimetro: entry.horimetro }).eq('id', entry.vehicle_id);
       await fetchData();
       await initAppData();
+      
+      if (entry.has_issues) {
+        if (confirm("Checklist finalizado com pendências. Deseja abrir uma Ordem de Serviço agora?")) {
+           handleOpenOS({ 
+             vehicle_id: entry.vehicle_id, 
+             km: entry.km, 
+             hor: entry.horimetro,
+             description: `Gerado automaticamente via Checklist. Problemas relatados: ${entry.general_observations || 'Consultar checklist'}`
+           });
+           return;
+        }
+      }
       setView('dashboard');
     } catch (err) {
       await saveOfflineEntry(entry);
@@ -149,7 +169,6 @@ const App: React.FC = () => {
       <header className="bg-[#020617] text-white shadow-lg sticky top-0 z-50 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { setView('dashboard'); setSelectedMaintId(null); }}>
-            {/* Logo oficial idêntico ao Login (FLEET azul e LOG cinza) */}
             <h1 className="text-xl sm:text-2xl font-black tracking-tighter flex items-baseline select-none">
               <span className="text-[#00548b]">FLEET</span>
               <span className="text-[#425466]">LOG</span>
@@ -203,11 +222,24 @@ const App: React.FC = () => {
             aiSummary={null}
             isSummarizing={false}
             generateAiReport={() => {}}
+            onNewOS={() => { setOsInitialData({}); setView('service_order'); }}
           />
         )}
         {view === 'form' && <ChecklistForm user={user} vehicles={vehicles} availableItems={checklistItems} onSubmit={handleSubmitEntry} onCancel={() => setView('dashboard')} />}
         {view === 'refueling' && <RefuelingForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); initAppData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
         {view === 'lubricant' && <LubricantForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); initAppData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
+        {view === 'service_order' && (
+          <ServiceOrderForm 
+            user={user} 
+            vehicles={vehicles} 
+            initialVehicleId={osInitialData.vehicle_id}
+            initialKm={osInitialData.km}
+            initialHor={osInitialData.hor}
+            initialDescription={osInitialData.description}
+            onSubmit={() => { fetchData(); initAppData(); setView('dashboard'); }} 
+            onCancel={() => setView('dashboard')} 
+          />
+        )}
         {view === 'maintenance_timer' && (
           <MaintenanceTimer 
             user={user} 
@@ -222,6 +254,7 @@ const App: React.FC = () => {
             onSelectRefueling={() => { setInitialRecordTab('refueling'); setView('history_records'); }}
             onSelectLubricant={() => { setInitialRecordTab('lubricant'); setView('history_records'); }}
             onSelectMaintenance={() => { setInitialRecordTab('maintenance'); setView('history_records'); }}
+            onSelectServiceOrder={() => { setInitialRecordTab('service_order'); setView('history_records'); }}
             onBack={() => setView('dashboard')} 
           />
         )}

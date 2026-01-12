@@ -1,5 +1,5 @@
 {
-  "name": "FleetLog - Inteligência em Movimento",
+  "name": "FleetLog - Aplicação",
   "description": "Gestão e registros operacionais de frota, incluindo checklist, abastecimentos e manutenção com inteligência operacional.",
   "requestFramePermissions": [
     "camera"
