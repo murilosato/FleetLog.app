@@ -79,7 +79,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-rajdhani">
       
-      {/* Imagem de Fundo (Frota) - Visibilidade aumentada conforme solicitado */}
+      {/* Imagem de Fundo (Frota) */}
       <div className="absolute inset-0 z-0">
         <img 
           src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=2070&auto=format&fit=crop" 
@@ -96,14 +96,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="bg-[#0f172a]/95 backdrop-blur-3xl rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_100px_rgba(0,0,0,0.7)] border border-slate-800/60">
           
           <div className="flex flex-col items-center mb-10 text-center">
-            {/* Logo Respeitando Foto 1: FLEET (Azul) LOG (Cinza/Grafite) */}
+            {/* Logo: FLEET (Azul) LOG (Cinza/Grafite) */}
             <div className="mb-2">
               <h1 className="text-4xl sm:text-5xl font-black tracking-tighter flex items-baseline">
                 <span className="text-[#00548b]">FLEET</span>
                 <span className="text-[#425466]">LOG</span>
               </h1>
             </div>
-            {/* Subtítulo atualizado conforme solicitado */}
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.4em] mt-1">Aqui será a Gestão da sua Frota</p>
           </div>
 
@@ -172,10 +171,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
           </form>
 
-          {/* Rodapé do Card com as frases solicitadas */}
+          {/* Rodapé do Card */}
           <div className="mt-12 pt-8 border-t border-slate-800/80 flex flex-col items-center gap-6">
             
-            {/* Frase operacional no rodapé do card conforme solicitado */}
             <div className="px-2">
               <p className="text-slate-400 font-bold text-[10px] sm:text-[11px] leading-relaxed text-center italic opacity-90 border-l-2 border-[#00548b] pl-3">
                 "Aqui começam os dados da sua frota, controle operacional inteligente em tempo real."
@@ -184,13 +182,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             <button 
               onClick={handleInstall}
-              className="flex items-center gap-3 text-slate-500 hover:text-[#00548b] transition-colors"
+              className="flex items-center gap-4 group transition-all"
             >
-              <div className="w-6 h-6 flex items-baseline font-black text-[9px] tracking-tighter shrink-0 border border-slate-700 rounded-lg p-1 justify-center">
-                <span className="text-[#00548b]">F</span>
-                <span className="text-[#425466]">L</span>
+              {/* Ícone FL Estilizado Obedecendo a Marca */}
+              <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shadow-xl group-hover:border-[#00548b]/50 group-hover:shadow-[#00548b]/10 transition-all">
+                <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M5 5H13V8H8V11H12V14H8V19H5V5Z" fill="#00548b" />
+                  <path d="M14 5H17V16H20V19H14V5Z" fill="#425466" />
+                </svg>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">Baixar App Corporativo</span>
+              <div className="flex flex-col items-start">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#00548b] group-hover:text-blue-400">Baixar Aplicativo</span>
+                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">FleetLog Corporate v8.2</span>
+              </div>
             </button>
             
             <div className="flex items-center gap-4">
