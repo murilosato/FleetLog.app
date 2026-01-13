@@ -105,31 +105,32 @@ const App: React.FC = () => {
   if (!user) return <Login onLogin={setUser} />;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-rajdhani">
       <header className="bg-[#020617] text-white shadow-lg sticky top-0 z-50 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('dashboard')}>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tighter flex items-baseline select-none">
+        <div className="max-w-7xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => setView('dashboard')}>
+            <h1 className="text-lg sm:text-2xl font-black tracking-tighter flex items-baseline select-none">
               <span className="text-[#00548b]">FLEET</span>
               <span className="text-[#425466]">LOG</span>
             </h1>
           </div>
           
-          <nav className="hidden md:flex items-center gap-4">
-            <button onClick={() => setView('dashboard')} className={`px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider ${view === 'dashboard' ? 'bg-[#00548b]' : 'opacity-60 hover:opacity-100'}`}>Painel</button>
-            <button onClick={() => setView('history_portal')} className={`px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider ${view.includes('history') ? 'bg-[#00548b]' : 'opacity-60 hover:opacity-100'}`}>Registros</button>
-            <button onClick={() => setView('reports')} className={`px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider ${view === 'reports' ? 'bg-[#00548b]' : 'opacity-60 hover:opacity-100'}`}>Analytics</button>
+          {/* Navegação Mobile e Desktop unificada como Scroll Horizontal para Mobile */}
+          <nav className="flex flex-1 items-center gap-2 overflow-x-auto hide-scrollbar sm:justify-center sm:overflow-visible py-2">
+            <button onClick={() => setView('dashboard')} className={`px-3 sm:px-4 py-2 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${view === 'dashboard' ? 'bg-[#00548b] shadow-lg shadow-blue-900/40' : 'opacity-60 hover:opacity-100'}`}>Painel</button>
+            <button onClick={() => setView('history_portal')} className={`px-3 sm:px-4 py-2 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${view.includes('history') ? 'bg-[#00548b] shadow-lg shadow-blue-900/40' : 'opacity-60 hover:opacity-100'}`}>Registros</button>
+            <button onClick={() => setView('reports')} className={`px-3 sm:px-4 py-2 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${view === 'reports' ? 'bg-[#00548b] shadow-lg shadow-blue-900/40' : 'opacity-60 hover:opacity-100'}`}>Analytics</button>
             {user.role === 'ADMIN' && (
-              <button onClick={() => setView('admin')} className={`px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider ${view === 'admin' ? 'bg-[#00548b]' : 'opacity-60 hover:opacity-100'}`}>Gestão</button>
+              <button onClick={() => setView('admin')} className={`px-3 sm:px-4 py-2 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${view === 'admin' ? 'bg-[#00548b] shadow-lg shadow-blue-900/40' : 'opacity-60 hover:opacity-100'}`}>Gestão</button>
             )}
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <div className="text-right hidden sm:block border-r border-slate-800 pr-4">
                <p className="text-[10px] font-black text-[#00548b] uppercase leading-none mb-1">{user.role}</p>
                <p className="text-xs font-bold text-slate-300 leading-none">{user.name}</p>
             </div>
-            <button onClick={() => setUser(null)} className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-red-900 transition-colors">
+            <button onClick={() => setUser(null)} className="p-2 sm:p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-red-900 transition-colors shadow-sm">
                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           </div>
