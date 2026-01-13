@@ -82,7 +82,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       {/* Imagem de Fundo (Frota) - Visibilidade aumentada conforme solicitado */}
       <div className="absolute inset-0 z-0">
         <img 
-          src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=2070&auto=format&fit=crop" 
+          src="https://ybclluccxjblhougqdep.supabase.co/storage/v1/object/public/FLEETLOG/VEICULOS.png" 
           alt="Frota de Caminhões Profissional" 
           className="w-full h-full object-cover opacity-[0.15] contrast-125"
         />
