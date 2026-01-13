@@ -9,12 +9,12 @@
   "theme_color": "#020617",
   "icons": [
     {
-      "src": "https://img.icons8.com/fluency/192/000000/truck.png",
+      "src": "https://ybclluccxjblhougqdep.supabase.co/storage/v1/object/public/FLEETLOG/ChatGPT%20Image%2012%20de%20jan.%20de%202026,%2021_50_29.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://img.icons8.com/fluency/512/000000/truck.png",
+      "src": "https://ybclluccxjblhougqdep.supabase.co/storage/v1/object/public/FLEETLOG/ChatGPT%20Image%2012%20de%20jan.%20de%202026,%2021_50_29.png",
       "sizes": "512x512",
       "type": "image/png"
     }
