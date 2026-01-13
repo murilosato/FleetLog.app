@@ -14,63 +14,149 @@ const ReportsView: React.FC<ReportsViewProps> = ({ availableItems, onBack }) => 
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
+  // Helper para formatação de data e hora rigorosa
+  const formatDateTime = (val: any) => {
+    if (!val) return '';
+    const date = new Date(val);
+    if (isNaN(date.getTime())) return val;
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
   const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
+    // Adiciona BOM para garantir abertura correta de acentos no Excel
     const csv = "\ufeff" + [headers.join(';'), ...rows.map(r => r.map(c => `"${(c || '').toString().replace(/"/g, '""')}"`).join(';'))].join('\n');
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    link.download = `${filename}_${startDate}.csv`; link.click();
+    link.download = `${filename}_${startDate}.csv`; 
+    link.click();
   };
 
   const handleExport = async () => {
     setLoading(true);
     const start = `${startDate}T00:00:00`;
     const end = `${endDate}T23:59:59`;
+    
     try {
       if (reportType === 'checklists') {
         const { data } = await supabase.from('checklist_entries').select('*').gte('date', startDate).lte('date', endDate).order('created_at', { ascending: true });
         const sortedItems = [...availableItems].sort((a,b) => a.id - b.id);
-        const headers = ['Controle', 'Data', 'Veiculo', 'Turno', 'Tipo', 'Motorista', 'KM', 'HOR', 'Tem Falha?', 'Obs Geral'];
+        const headers = ['Controle', 'Data/Hora', 'Veiculo', 'Turno', 'Tipo', 'Motorista', 'KM', 'HOR', 'Tem Falha?', 'Obs Geral'];
+        
         sortedItems.forEach(i => { 
           headers.push(`[${i.id.toString().padStart(2, '0')}] ${i.label}`); 
           headers.push(`[${i.id.toString().padStart(2, '0')}] OBS`); 
         });
+
         const rows = data?.map((s, idx) => {
           const controlNum = (idx + 1).toString().padStart(5, '0');
-          const base = [controlNum, s.date, s.prefix, s.shift, s.type, s.driver_name, s.km, s.horimetro, s.has_issues ? 'SIM' : 'NAO', s.general_observations || ''];
+          // Usa s.created_at para ter a hora completa
+          const base = [controlNum, formatDateTime(s.created_at), s.prefix, s.shift, s.type, s.driver_name, s.km, s.horimetro, s.has_issues ? 'SIM' : 'NAO', s.general_observations || ''];
           sortedItems.forEach(i => { 
             const r = s.items?.[i.id] || s.items?.[i.id.toString()]; 
-            base.push(r?.status || '-'); base.push(r?.observations || ''); 
+            base.push(r?.status || 'NÃO VISTORIADO'); 
+            base.push(r?.observations || ''); 
           });
           return base;
         });
         downloadCSV('Relatorio_Checklist', headers, rows || []);
+
       } else if (reportType === 'fuels') {
         const { data } = await supabase.from('refueling_entries').select('*, fuel_types(name), users(name)').gte('event_at', start).lte('event_at', end).order('event_at', { ascending: true });
-        const headers = ['Controle', 'Data', 'Veículo', 'Responsável', 'KM', 'HOR', 'Combustível', 'Qtd (L)', 'ARLA (L)'];
-        const rows = data?.map((r, idx) => [(idx + 1).toString().padStart(5, '0'), new Date(r.event_at).toLocaleString(), r.prefix, r.users?.name, r.km, r.horimetro, r.fuel_types?.name, r.quantity, r.arla_quantity || 0]);
+        const headers = ['Controle', 'Data/Hora', 'Veículo', 'Responsável', 'KM', 'HOR', 'Combustível', 'Qtd (L)', 'ARLA (L)'];
+        const rows = data?.map((r, idx) => [
+          (idx + 1).toString().padStart(5, '0'), 
+          formatDateTime(r.event_at), 
+          r.prefix, 
+          r.users?.name, 
+          r.km, 
+          r.horimetro, 
+          r.fuel_types?.name, 
+          r.quantity, 
+          r.arla_quantity || 0
+        ]);
         downloadCSV('Relatorio_Abastecimento', headers, rows || []);
+
       } else if (reportType === 'lubricants') {
         const { data } = await supabase.from('lubricant_entries').select('*, lubricant_types(name), users(name)').gte('event_at', start).lte('event_at', end).order('event_at', { ascending: true });
-        const headers = ['Controle', 'Data', 'Veículo', 'Responsável', 'KM', 'HOR', 'Insumo', 'Qtd'];
-        const rows = data?.map((l, idx) => [(idx + 1).toString().padStart(5, '0'), new Date(l.event_at).toLocaleString(), l.prefix, l.users?.name, l.km, l.horimetro, l.lubricant_types?.name, l.quantity]);
+        const headers = ['Controle', 'Data/Hora', 'Veículo', 'Responsável', 'KM', 'HOR', 'Insumo', 'Qtd'];
+        const rows = data?.map((l, idx) => [
+          (idx + 1).toString().padStart(5, '0'), 
+          formatDateTime(l.event_at), 
+          l.prefix, 
+          l.users?.name, 
+          l.km, 
+          l.horimetro, 
+          l.lubricant_types?.name, 
+          l.quantity
+        ]);
         downloadCSV('Relatorio_Lubrificantes', headers, rows || []);
+
       } else if (reportType === 'maintenance_sessions') {
         const { data } = await supabase.from('maintenance_sessions').select('*, users(name)').gte('start_time', start).lte('start_time', end).order('start_time', { ascending: true });
-        const headers = ['Controle', 'Inicio', 'Fim', 'Veiculo', 'Mecanico', 'Motivo', 'Tempo Efetivo (Segundos)', 'Status'];
-        const rows = data?.map((m, idx) => [(idx + 1).toString().padStart(5, '0'), m.start_time, m.end_time || '-', m.prefix, m.users?.name || '-', m.opening_reason, m.total_effective_seconds || 0, m.status]);
+        const headers = ['Controle', 'Início', 'Fim', 'Veiculo', 'Mecanico', 'Motivo', 'Tempo Efetivo (Segundos)', 'Status'];
+        const rows = data?.map((m, idx) => [
+          (idx + 1).toString().padStart(5, '0'), 
+          formatDateTime(m.start_time), 
+          formatDateTime(m.end_time), 
+          m.prefix, 
+          m.users?.name || '-', 
+          m.opening_reason, 
+          m.total_effective_seconds || 0, 
+          m.status
+        ]);
         downloadCSV('Relatorio_Oficina_Sessoes', headers, rows || []);
+
       } else if (reportType === 'maintenance_pauses') {
-        const { data } = await supabase.from('maintenance_pauses').select('*, maintenance_sessions(prefix)').gte('pause_start', start).lte('pause_start', end);
-        const headers = ['Controle Pausa', 'Veiculo', 'Motivo da Parada', 'Inicio Pausa', 'Fim Pausa', 'Tempo (Segundos)'];
-        const rows = data?.map((p, idx) => [(idx + 1).toString().padStart(5, '0'), p.maintenance_sessions?.prefix || '-', p.reason, p.pause_start, p.pause_end || '-', p.pause_end ? Math.floor((new Date(p.pause_end).getTime() - new Date(p.pause_start).getTime()) / 1000) : 0]);
+        // Primeiro busca as sessões do período para criar o mapa de Números de Controle
+        const { data: sessions } = await supabase.from('maintenance_sessions').select('id').gte('start_time', start).lte('start_time', end).order('start_time', { ascending: true });
+        const sessionControlMap = new Map();
+        sessions?.forEach((s, idx) => {
+          sessionControlMap.set(s.id, (idx + 1).toString().padStart(5, '0'));
+        });
+
+        const { data: pauses } = await supabase.from('maintenance_pauses').select('*, maintenance_sessions(id, prefix)').gte('pause_start', start).lte('pause_start', end).order('pause_start', { ascending: true });
+        
+        const headers = ['Controle Cronômetro', 'Veiculo', 'Motivo da Parada', 'Início Pausa', 'Fim Pausa', 'Tempo (Segundos)'];
+        const rows = pauses?.map((p) => [
+          sessionControlMap.get(p.maintenance_sessions?.id) || 'N/A', 
+          p.maintenance_sessions?.prefix || '-', 
+          p.reason, 
+          formatDateTime(p.pause_start), 
+          formatDateTime(p.pause_end), 
+          p.pause_end ? Math.floor((new Date(p.pause_end).getTime() - new Date(p.pause_start).getTime()) / 1000) : 0
+        ]);
         downloadCSV('Relatorio_Oficina_Paradas', headers, rows || []);
+
       } else if (reportType === 'service_order') {
         const { data } = await supabase.from('service_orders').select('*, users(name)').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: true });
-        const headers = ['Controle', 'Data', 'Nº OS', 'Veiculo', 'Abertura', 'Motivo', 'KM', 'HOR', 'Status', 'Obs. Fechamento'];
-        const rows = data?.map((o, idx) => [(idx + 1).toString().padStart(5, '0'), new Date(o.created_at).toLocaleString(), o.os_number, o.prefix, o.users?.name, o.description, o.km, o.horimetro, o.status, o.closing_observations || '']);
+        const headers = ['Controle', 'Data/Hora Abertura', 'Nº OS', 'Veiculo', 'Responsável Abertura', 'Motivo', 'KM', 'HOR', 'Status', 'Laudo Fechamento'];
+        const rows = data?.map((o, idx) => [
+          (idx + 1).toString().padStart(5, '0'), 
+          formatDateTime(o.created_at), 
+          o.os_number, 
+          o.prefix, 
+          o.users?.name, 
+          o.description, 
+          o.km, 
+          o.horimetro, 
+          o.status, 
+          o.closing_observations || ''
+        ]);
         downloadCSV('Relatorio_OS', headers, rows || []);
       }
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error(err); 
+      alert("Erro ao exportar relatório. Verifique sua conexão.");
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   return (
