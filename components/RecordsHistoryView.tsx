@@ -72,9 +72,9 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
 
     setIsClosing(true);
     try {
-      // Estratégia: Gravar o fechamento no campo description para evitar erro de coluna
       const closingDate = new Date().toLocaleString('pt-BR');
-      const updatedDescription = `${closingOS.description}\n\n[LAUDO DE FECHAMENTO - ${closingDate} por ${currentUser?.name || 'Sistema'}]:\n${closingObs}`;
+      const currentDesc = closingOS.description || 'Sem descrição inicial';
+      const updatedDescription = `${currentDesc}\n\n[LAUDO DE FECHAMENTO - ${closingDate} por ${currentUser?.name || 'Sistema'}]:\n${closingObs}`;
 
       const { error } = await supabase
         .from('service_orders')
@@ -112,8 +112,8 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
     }, 0);
   };
 
-  // Função para separar descrição original do laudo de fechamento
-  const parseDescription = (desc: string) => {
+  const parseDescription = (desc: string | null | undefined) => {
+    if (!desc) return { original: 'N/A', closing: null };
     const parts = desc.split('[LAUDO DE FECHAMENTO');
     return {
       original: parts[0].trim(),
@@ -123,19 +123,20 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20">
+      {/* Header Histórico Operacional */}
       <div className="bg-white p-6 sm:p-8 rounded-[3rem] shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between gap-6">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all shadow-sm">
+          <button onClick={onBack} className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all shadow-sm shrink-0">
             <svg className="w-5 h-5 text-[#0A2540]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" strokeWidth="2.5"/></svg>
           </button>
           <h2 className="text-2xl font-black text-[#0A2540] uppercase">Histórico Operacional</h2>
         </div>
-        <div className="flex bg-[#0A2540]/5 p-1.5 rounded-2xl gap-1 overflow-x-auto hide-scrollbar">
+        <div className="flex bg-[#0A2540]/5 p-1.5 rounded-[2rem] gap-1 overflow-x-auto hide-scrollbar max-w-full md:max-w-none">
           {['refueling', 'lubricant', 'service_order', 'maintenance'].map(t => (
             <button 
               key={t} 
               onClick={() => { setTab(t as any); setExpandedId(null); }} 
-              className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${tab === t ? 'bg-[#0A2540] text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`px-5 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${tab === t ? 'bg-[#0A2540] text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
             >
               {t === 'refueling' ? 'Abastec.' : t === 'lubricant' ? 'Lubrif.' : t === 'service_order' ? 'O.S. Frota' : 'Oficina'}
             </button>
@@ -290,7 +291,7 @@ const RecordsHistoryView: React.FC<RecordsHistoryViewProps> = ({ onBack, initial
                              <div className="space-y-4">
                                 <div>
                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Diagnóstico Inicial de Abertura</h5>
-                                   <p className="text-xs font-bold text-slate-700 bg-white p-4 rounded-xl border border-slate-100 italic">"{parsedOS?.original}"</p>
+                                   <p className="text-xs font-bold text-slate-700 bg-white p-4 rounded-xl border border-slate-100 italic whitespace-pre-wrap">"{parsedOS?.original}"</p>
                                 </div>
                                 {parsedOS?.closing && (
                                    <div className="animate-in fade-in slide-in-from-top-2">
