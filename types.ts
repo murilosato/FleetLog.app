@@ -5,24 +5,27 @@ export enum ItemStatus {
   DEFECTIVE = 'DEFEITO'
 }
 
-export interface ChecklistItem {
-  id: number;
-  label: string;
-  surveyed: boolean;
+export interface Company {
+  id: string;
+  name: string;
+  active: boolean;
+  created_at: string;
 }
 
 export interface User {
   id: string;
   name: string;
   username: string;
-  email?: string;
-  role: 'ADMIN' | 'OPERADOR' | 'MANUTENCAO' | 'OPERACAO';
+  email: string;
+  role: 'SUPERADMIN' | 'ADMIN' | 'OPERADOR' | 'MANUTENCAO' | 'OPERACAO';
   matricula: string;
   active: boolean;
+  company_id: string; // Vínculo obrigatório com a empresa
 }
 
 export interface Vehicle {
   id: string;
+  company_id: string;
   prefix: string;
   plate: string;
   current_km: number;
@@ -34,6 +37,7 @@ export interface Vehicle {
 
 export interface DBChecklistItem {
   id: number;
+  company_id: string;
   label: string;
   category: string;
   active?: boolean;
@@ -41,6 +45,7 @@ export interface DBChecklistItem {
 
 export interface ServiceOrder {
   id: string;
+  company_id: string;
   os_number: number;
   vehicle_id: string;
   prefix: string;
@@ -56,32 +61,9 @@ export interface ServiceOrder {
   closed_by?: string;
 }
 
-export interface ServiceOrderLog {
-  id: string;
-  os_id: string;
-  os_number: number;
-  action_description: string;
-  user_name: string;
-  vehicle_prefix: string;
-  km: number;
-  horimetro: number;
-  created_at: string;
-}
-
-export interface FuelType {
-  id: number;
-  name: string;
-  active: boolean;
-}
-
-export interface LubricantType {
-  id: number;
-  name: string;
-  active: boolean;
-}
-
 export interface MaintenanceSession {
   id: string;
+  company_id: string;
   user_id: string;
   vehicle_id: string;
   prefix: string;
@@ -91,19 +73,14 @@ export interface MaintenanceSession {
   status: 'ACTIVE' | 'PAUSED' | 'FINISHED';
   total_effective_seconds: number;
   user_name?: string;
-  plate?: string;
 }
 
-export interface MaintenancePause {
-  id: string;
-  session_id: string;
-  pause_start: string;
-  pause_end?: string;
-  reason: string;
-}
-
+/**
+ * Interface updated to include validation fields used by HistoryView
+ */
 export interface ChecklistEntry {
   id: string;
+  company_id: string;
   date: string;
   shift: string;
   type: 'Saída' | 'Retorno';
@@ -118,15 +95,46 @@ export interface ChecklistEntry {
   user_id: string;
   has_issues: boolean;
   has_divergence?: boolean;
-  divergence_details?: string;
-  maintenance_checked?: boolean;
-  maintenance_user_id?: string;
   operation_checked?: boolean;
   operation_user_id?: string;
+  maintenance_checked?: boolean;
+  maintenance_user_id?: string;
+}
+
+/**
+ * Interface for Fuel Categories
+ */
+export interface FuelType {
+  id: number;
+  company_id?: string;
+  name: string;
+  active: boolean;
+}
+
+/**
+ * Interface for Lubricant/Fluid types
+ */
+export interface LubricantType {
+  id: number;
+  company_id?: string;
+  name: string;
+  active: boolean;
+}
+
+/**
+ * Interface for Maintenance Pause events
+ */
+export interface MaintenancePause {
+  id: string;
+  session_id: string;
+  reason: string;
+  pause_start: string;
+  pause_end?: string;
 }
 
 export interface RefuelingEntry {
   id: string;
+  company_id: string;
   event_at: string;
   vehicle_id: string;
   prefix: string;
@@ -136,13 +144,11 @@ export interface RefuelingEntry {
   quantity: number;
   arla_quantity?: number;
   user_id: string;
-  created_at?: string;
-  fuel_name?: string;
-  user_name?: string;
 }
 
 export interface LubricantEntry {
   id: string;
+  company_id: string;
   event_at: string;
   vehicle_id: string;
   prefix: string;
@@ -151,7 +157,4 @@ export interface LubricantEntry {
   lubricant_type_id: number;
   quantity: number;
   user_id: string;
-  created_at?: string;
-  lubricant_name?: string;
-  user_name?: string;
 }
