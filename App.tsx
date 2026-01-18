@@ -29,36 +29,6 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Sistema de Gerenciamento de Sessão Profissional
-  useEffect(() => {
-    // Verificar se já existe uma sessão ativa ao carregar
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) fetchUserProfile(session.user.id);
-    });
-
-    // Escutar mudanças no estado de autenticação (Login/Logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (data) setUser(data as User);
-    else if (error) console.error("Erro ao carregar perfil:", error.message);
-  };
-
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
@@ -102,8 +72,7 @@ const App: React.FC = () => {
     if (user) { fetchData(); initAppData(); }
   }, [user, fetchData, initAppData]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
     setUser(null);
     setView('dashboard');
   };

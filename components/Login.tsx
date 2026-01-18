@@ -8,7 +8,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -36,11 +36,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
     
-    if (!cleanEmail || !cleanPass) {
-      setError('Informe seu e-mail corporativo e senha.');
+    if (!cleanUser || !cleanPass) {
+      setError('Informe seu usuário e senha.');
       return;
     }
 
@@ -48,40 +48,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      // 1. Tentar Login pelo Supabase Auth (Seguro e Profissional)
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPass
-      });
+      // Reversão para busca direta na tabela users (Sistema Original)
+      const { data, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', cleanUser)
+        .eq('password_hash', cleanPass)
+        .maybeSingle();
 
-      if (authError) {
-        if (authError.message.includes('Invalid login credentials')) {
-          throw new Error('E-mail ou senha incorretos.');
-        }
-        throw authError;
-      }
+      if (dbError) throw dbError;
 
-      if (authData.user) {
-        // 2. Buscar dados adicionais do perfil na tabela public.users
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single();
-
-        if (profileError || !profile) {
-          throw new Error('Perfil não encontrado no sistema. Contate o suporte.');
-        }
-
-        if (profile.active === false) {
-          await supabase.auth.signOut();
-          throw new Error('Acesso negado: Conta inativa.');
-        }
-
-        onLogin(profile as User);
+      if (!data) {
+        setError('Acesso negado: Credenciais inválidas.');
+      } else if (data.active === false) {
+        setError('Acesso negado: Conta inativa.');
+      } else {
+        onLogin(data as User);
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(`Falha crítica: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -119,13 +104,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Acesso</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Usuário de Acesso</label>
               <input 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text" 
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-6 py-4 bg-slate-900/60 border-2 border-slate-800/80 rounded-2xl focus:border-[#00548b] focus:bg-slate-900 outline-none transition-all text-white font-bold placeholder:text-slate-800 text-xs tracking-wider"
-                placeholder="SEU E-MAIL CADASTRADO"
+                placeholder="DIGITE SEU USUÁRIO"
                 required
               />
             </div>
@@ -138,7 +123,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-6 py-4 bg-slate-900/60 border-2 border-slate-800/80 rounded-2xl focus:border-[#00548b] focus:bg-slate-900 outline-none transition-all text-white font-bold placeholder:text-slate-800 text-xs tracking-wider"
-                  placeholder="SUA SENHA"
+                  placeholder="DIGITE SUA SENHA"
                   required
                 />
                 <button 
@@ -166,7 +151,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               type="submit"
               className="w-full py-5 bg-[#00548b] text-white font-black rounded-2xl shadow-[0_15px_40px_rgba(0,84,139,0.4)] hover:bg-[#00436e] active:scale-[0.98] transition-all text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-50"
             >
-              {loading ? "AUTENTICANDO..." : "INICIALIZAR SISTEMA"}
+              {loading ? "VALIDANDO..." : "INICIALIZAR SISTEMA"}
             </button>
           </form>
 
