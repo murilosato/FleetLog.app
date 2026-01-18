@@ -1,5 +1,4 @@
 
-
 export enum ItemStatus {
   OK = 'OK',
   MISSING = 'FALTA',
@@ -20,8 +19,6 @@ export interface User {
   role: 'ADMIN' | 'OPERADOR' | 'MANUTENCAO' | 'OPERACAO';
   matricula: string;
   active: boolean;
-  // Added company_id to support Row Level Security (RLS) and fix type error in forms
-  company_id?: string;
 }
 
 export interface Vehicle {
@@ -59,6 +56,18 @@ export interface ServiceOrder {
   closed_by?: string;
 }
 
+export interface ServiceOrderLog {
+  id: string;
+  os_id: string;
+  os_number: number;
+  action_description: string;
+  user_name: string;
+  vehicle_prefix: string;
+  km: number;
+  horimetro: number;
+  created_at: string;
+}
+
 export interface FuelType {
   id: number;
   name: string;
@@ -82,6 +91,7 @@ export interface MaintenanceSession {
   status: 'ACTIVE' | 'PAUSED' | 'FINISHED';
   total_effective_seconds: number;
   user_name?: string;
+  plate?: string;
 }
 
 export interface MaintenancePause {
@@ -113,8 +123,6 @@ export interface ChecklistEntry {
   maintenance_user_id?: string;
   operation_checked?: boolean;
   operation_user_id?: string;
-  // Added company_id to support Row Level Security (RLS) and fix type error in forms
-  company_id?: string;
 }
 
 export interface RefuelingEntry {
@@ -128,6 +136,9 @@ export interface RefuelingEntry {
   quantity: number;
   arla_quantity?: number;
   user_id: string;
+  created_at?: string;
+  fuel_name?: string;
+  user_name?: string;
 }
 
 export interface LubricantEntry {
@@ -140,4 +151,7 @@ export interface LubricantEntry {
   lubricant_type_id: number;
   quantity: number;
   user_id: string;
+  created_at?: string;
+  lubricant_name?: string;
+  user_name?: string;
 }
