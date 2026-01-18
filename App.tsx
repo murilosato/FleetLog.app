@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { User, ChecklistEntry, Vehicle, DBChecklistItem, RefuelingEntry, LubricantEntry, MaintenanceSession, ServiceOrder } from './types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { User, ChecklistEntry, Vehicle, DBChecklistItem, RefuelingEntry, LubricantEntry, MaintenanceSession } from './types';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ChecklistForm from './components/ChecklistForm';
@@ -19,7 +19,6 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<'dashboard' | 'form' | 'refueling' | 'lubricant' | 'service_order' | 'maintenance_timer' | 'history_portal' | 'history_checklists' | 'history_records' | 'admin' | 'reports'>('dashboard');
   const [initialRecordTab, setInitialRecordTab] = useState<'refueling' | 'lubricant' | 'maintenance' | 'service_order'>('refueling');
-  const [osInitialData, setOsInitialData] = useState<{vehicle_id?: string, km?: number, hor?: number, description?: string}>({});
   
   const [entries, setEntries] = useState<ChecklistEntry[]>([]);
   const [refuelingEntries, setRefuelingEntries] = useState<RefuelingEntry[]>([]);
@@ -29,9 +28,39 @@ const App: React.FC = () => {
   const [checklistItems, setChecklistItems] = useState<DBChecklistItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
+  // Sistema de Gerenciamento de Sessão Profissional
+  useEffect(() => {
+    // Verificar se já existe uma sessão ativa ao carregar
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) fetchUserProfile(session.user.id);
+    });
+
+    // Escutar mudanças no estado de autenticação (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (data) setUser(data as User);
+    else if (error) console.error("Erro ao carregar perfil:", error.message);
+  };
+
   const fetchData = useCallback(async () => {
-    if (!navigator.onLine) return;
+    if (!user) return;
     try {
       const today = new Date().toISOString().split('T')[0];
       const [checkRes, refRes, lubRes, maintRes] = await Promise.all([
@@ -46,60 +75,37 @@ const App: React.FC = () => {
       if (lubRes.data) setLubricantEntries(lubRes.data as LubricantEntry[]);
       if (maintRes.data) setMaintenanceSessions(maintRes.data as MaintenanceSession[]);
     } catch (err) {
-      console.error('Erro ao buscar dados do Dashboard:', err);
+      console.error('Erro ao buscar dados:', err);
     }
-  }, []);
+  }, [user]);
 
   const initAppData = useCallback(async () => {
+    if (!user) return;
     setIsLoading(true);
     try {
-      if (navigator.onLine) {
-        const [vRes, iRes, uRes] = await Promise.all([
-          supabase.from('vehicles').select('*').order('prefix'),
-          supabase.from('checklist_items').select('*').order('id'),
-          supabase.from('users').select('*').order('name')
-        ]);
-        if (vRes.data) setVehicles(vRes.data);
-        if (iRes.data) setChecklistItems(iRes.data);
-        if (uRes.data) setUsers(uRes.data as User[]);
-      }
-    } catch (err: any) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (user) { fetchData(); initAppData(); }
-  }, [user, fetchData, initAppData]);
-
-  const handleSubmitEntry = async (entry: ChecklistEntry) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.from('checklist_entries').insert([entry]);
-      if (error) throw error;
-      await supabase.from('vehicles').update({ current_km: entry.km, current_horimetro: entry.horimetro }).eq('id', entry.vehicle_id);
-      
-      if (entry.has_issues) {
-        if (confirm("Checklist com pendências. Abrir Ordem de Serviço?")) {
-           setOsInitialData({ 
-             vehicle_id: entry.vehicle_id, 
-             km: entry.km, 
-             hor: entry.horimetro,
-             description: entry.general_observations || ''
-           });
-           setView('service_order');
-           return;
-        }
-      }
-      setView('dashboard');
-      fetchData();
+      const [vRes, iRes, uRes] = await Promise.all([
+        supabase.from('vehicles').select('*').order('prefix'),
+        supabase.from('checklist_items').select('*').order('id'),
+        supabase.from('users').select('*').order('name')
+      ]);
+      if (vRes.data) setVehicles(vRes.data);
+      if (iRes.data) setChecklistItems(iRes.data);
+      if (uRes.data) setUsers(uRes.data as User[]);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) { fetchData(); initAppData(); }
+  }, [user, fetchData, initAppData]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setView('dashboard');
   };
 
   if (!user) return <Login onLogin={setUser} />;
@@ -115,22 +121,23 @@ const App: React.FC = () => {
             </h1>
           </div>
           
-          {/* Navegação Mobile e Desktop unificada como Scroll Horizontal para Mobile */}
           <nav className="flex flex-1 items-center gap-2 overflow-x-auto hide-scrollbar sm:justify-center sm:overflow-visible py-2">
-            <button onClick={() => setView('dashboard')} className={`px-3 sm:px-4 py-2 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${view === 'dashboard' ? 'bg-[#00548b] shadow-lg shadow-blue-900/40' : 'opacity-60 hover:opacity-100'}`}>Painel</button>
-            <button onClick={() => setView('history_portal')} className={`px-3 sm:px-4 py-2 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${view.includes('history') ? 'bg-[#00548b] shadow-lg shadow-blue-900/40' : 'opacity-60 hover:opacity-100'}`}>Registros</button>
-            <button onClick={() => setView('reports')} className={`px-3 sm:px-4 py-2 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${view === 'reports' ? 'bg-[#00548b] shadow-lg shadow-blue-900/40' : 'opacity-60 hover:opacity-100'}`}>Analytics</button>
+            <button onClick={() => setView('dashboard')} className={`px-4 py-2 rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest transition-all ${view === 'dashboard' ? 'bg-[#00548b] text-white shadow-lg' : 'opacity-50 hover:opacity-100'}`}>Painel</button>
+            <button onClick={() => setView('history_portal')} className={`px-4 py-2 rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest transition-all ${view.includes('history') ? 'bg-[#00548b] text-white shadow-lg' : 'opacity-50 hover:opacity-100'}`}>Registros</button>
             {user.role === 'ADMIN' && (
-              <button onClick={() => setView('admin')} className={`px-3 sm:px-4 py-2 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${view === 'admin' ? 'bg-[#00548b] shadow-lg shadow-blue-900/40' : 'opacity-60 hover:opacity-100'}`}>Gestão</button>
+              <>
+                <button onClick={() => setView('reports')} className={`px-4 py-2 rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest transition-all ${view === 'reports' ? 'bg-[#00548b] text-white shadow-lg' : 'opacity-50 hover:opacity-100'}`}>Analytics</button>
+                <button onClick={() => setView('admin')} className={`px-4 py-2 rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest transition-all ${view === 'admin' ? 'bg-[#00548b] text-white shadow-lg' : 'opacity-50 hover:opacity-100'}`}>Gestão</button>
+              </>
             )}
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="text-right hidden sm:block border-r border-slate-800 pr-4">
                <p className="text-[10px] font-black text-[#00548b] uppercase leading-none mb-1">{user.role}</p>
-               <p className="text-xs font-bold text-slate-300 leading-none">{user.name}</p>
+               <p className="text-xs font-bold text-slate-300 leading-none truncate max-w-[100px]">{user.name}</p>
             </div>
-            <button onClick={() => setUser(null)} className="p-2 sm:p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-red-900 transition-colors shadow-sm">
+            <button onClick={handleLogout} className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-red-900 transition-colors shadow-sm">
                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           </div>
@@ -145,14 +152,14 @@ const App: React.FC = () => {
             onNewChecklist={() => setView('form')} onNewRefueling={() => setView('refueling')}
             onNewLubricant={() => setView('lubricant')} onMaintenanceTimer={() => setView('maintenance_timer')}
             onViewHistory={() => setView('history_portal')} onRefresh={fetchData}
-            onNewOS={() => { setOsInitialData({}); setView('service_order'); }}
+            onNewOS={() => setView('service_order')}
             aiSummary={null} isSummarizing={false} generateAiReport={() => {}}
           />
         )}
-        {view === 'form' && <ChecklistForm user={user} vehicles={vehicles} availableItems={checklistItems} onSubmit={handleSubmitEntry} onCancel={() => setView('dashboard')} />}
+        {view === 'form' && <ChecklistForm user={user} vehicles={vehicles} availableItems={checklistItems} onSubmit={() => { fetchData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
         {view === 'refueling' && <RefuelingForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
         {view === 'lubricant' && <LubricantForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
-        {view === 'service_order' && <ServiceOrderForm user={user} vehicles={vehicles} {...osInitialData} onSubmit={() => { fetchData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
+        {view === 'service_order' && <ServiceOrderForm user={user} vehicles={vehicles} onSubmit={() => { fetchData(); setView('dashboard'); }} onCancel={() => setView('dashboard')} />}
         {view === 'maintenance_timer' && <MaintenanceTimer user={user} vehicles={vehicles} onBack={() => setView('dashboard')} />}
         {view === 'history_portal' && <HistoryPortal onSelectChecklists={() => setView('history_checklists')} onSelectRefueling={() => { setInitialRecordTab('refueling'); setView('history_records'); }} onSelectLubricant={() => { setInitialRecordTab('lubricant'); setView('history_records'); }} onSelectMaintenance={() => { setInitialRecordTab('maintenance'); setView('history_records'); }} onSelectServiceOrder={() => { setInitialRecordTab('service_order'); setView('history_records'); }} onBack={() => setView('dashboard')} />}
         {view === 'history_checklists' && <HistoryView submissions={entries} user={user} users={users} availableItems={checklistItems} onBack={() => setView('history_portal')} onRefresh={fetchData} />}
@@ -165,4 +172,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
