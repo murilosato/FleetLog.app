@@ -35,10 +35,8 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
 
     setLoading(true);
 
-    // FIX: Added explicit type assertion to Object.values(responses) to resolve 'unknown' property access errors
-    const responseValues = Object.values(responses) as Array<{ status: ItemStatus; observations?: string; surveyed: boolean }>;
-    const hasDefects = responseValues.some(r => r.status === ItemStatus.DEFECTIVE);
-    const hasMissing = responseValues.some(r => r.status === ItemStatus.MISSING);
+    const hasDefects = Object.values(responses).some(r => r.status === ItemStatus.DEFECTIVE);
+    const hasMissing = Object.values(responses).some(r => r.status === ItemStatus.MISSING);
     const hasDivergence = false;
 
     // Fixed ChecklistEntry object creation with all required variables
