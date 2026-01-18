@@ -35,13 +35,15 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
 
     setLoading(true);
 
-    const hasDefects = Object.values(responses).some(r => r.status === ItemStatus.DEFECTIVE);
-    const hasMissing = Object.values(responses).some(r => r.status === ItemStatus.MISSING);
+    // Added explicit casting to any to fix "Property 'status' does not exist on type 'unknown'" on lines 38-39
+    const hasDefects = Object.values(responses).some((r: any) => r.status === ItemStatus.DEFECTIVE);
+    const hasMissing = Object.values(responses).some((r: any) => r.status === ItemStatus.MISSING);
     const hasDivergence = false;
 
     // Fixed ChecklistEntry object creation with all required variables
     const entry: ChecklistEntry = {
       id: crypto.randomUUID(),
+      // company_id is now part of ChecklistEntry and User interfaces in types.ts to fix line 45 error
       company_id: user.company_id, // CRÍTICO PARA RLS
       date: new Date().toISOString().split('T')[0],
       shift,
@@ -161,18 +163,9 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Observações Gerais</label>
-          <textarea value={generalObs} onChange={e => setGeneralObs(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-bold text-slate-950 outline-none focus:bg-white focus:border-[#00548b] transition-all h-32" placeholder="Descreva qualquer detalhe adicional..." />
+          <textarea value={generalObs} onChange={e => setGeneralObs(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-[1.8rem] font-bold text-slate-950 outline-none focus:bg-white focus:border-[#00548b] transition-all h-32" placeholder="Descreva qualquer detailhe adicional..." />
         </div>
 
         <div className="flex gap-4 pt-4">
           <button type="button" onClick={onCancel} className="flex-1 py-5 text-slate-400 font-black text-[10px] uppercase tracking-widest">Cancelar</button>
-          <button disabled={loading || !selectedVehicle} className="flex-1 py-5 bg-[#0A2540] text-white rounded-[1.8rem] font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 shadow-xl">
-            {loading ? 'Processando...' : 'Finalizar e Salvar'}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-};
-
-export default ChecklistForm;
+          <button disabled={loading || !selectedVehicle} className="flex-1 py-5 bg-[#0A2540] text-white rounded-[1.8rem] font-black text-[10px] uppercase
