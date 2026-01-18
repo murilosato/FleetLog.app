@@ -35,11 +35,14 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
     return `${day}/${month}/${year}`;
   };
 
+  // Filtragem mais permissiva: se o status não for explicitamente falso, assume ativo
   const validAvailableItems = useMemo(() => {
-    return availableItems.filter(item => item.active !== false);
+    return (availableItems || []).filter(item => item.active !== false);
   }, [availableItems]);
 
-  const activeVehicles = useMemo(() => vehicles.filter(v => v.active !== false), [vehicles]);
+  const activeVehicles = useMemo(() => {
+    return (vehicles || []).filter(v => v.active !== false);
+  }, [vehicles]);
 
   useEffect(() => {
     if (validAvailableItems.length > 0) {
@@ -266,7 +269,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
     const isDivergent = divergenceItems.includes(item.id);
     const response = itemResponses[item.id];
     const isSurveyed = response?.surveyed ?? true;
-    const cleanLabel = item.label.replace(/^\d+\.\s*/, '');
+    const cleanLabel = (item.label || '').replace(/^\d+\.\s*/, '');
 
     return (
       <div key={item.id} className={`py-5 sm:py-6 border-b border-slate-50 last:border-0 transition-all ${isDivergent ? 'bg-red-50/50 -mx-4 px-4 rounded-[1.5rem] sm:rounded-3xl' : ''}`}>
@@ -386,8 +389,9 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Prefixo FleetLog</label>
                 <select 
                   className="w-full p-4 sm:p-5 bg-slate-50 border-2 border-slate-50 rounded-xl sm:rounded-[1.8rem] font-black text-slate-950 outline-none focus:bg-white focus:border-[#1E90FF] transition-all text-sm sm:text-base"
+                  value={selectedVehicle?.id || ''}
                   onChange={e => {
-                    const v = vehicles.find(v => v.id === e.target.value);
+                    const v = activeVehicles.find(v => v.id === e.target.value);
                     if (v) {
                       setSelectedVehicle(v);
                       setKm(v.current_km);
@@ -419,26 +423,13 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({ user, vehicles, available
           </div>
         )}
 
-        {step === 1 && (
+        {(step === 1 || step === 2) && (
           <div className="space-y-10 sm:space-y-12 animate-in fade-in slide-in-from-right-4">
-            {Object.keys(stage1Items).map((cat) => (
+            {Object.keys(step === 1 ? stage1Items : stage2Items).map((cat) => (
               <div key={cat} className="space-y-4 sm:space-y-5">
                 <h3 className="text-[10px] sm:text-[11px] font-black text-[#1E90FF] uppercase tracking-[0.2em] bg-blue-50/50 px-4 py-2 rounded-lg sm:rounded-xl inline-block border border-blue-100">{cat}</h3>
                 <div className="space-y-1 sm:space-y-2">
-                  {stage1Items[cat].map(renderItemRow)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-10 sm:space-y-12 animate-in fade-in slide-in-from-right-4">
-            {Object.keys(stage2Items).map((cat) => (
-              <div key={cat} className="space-y-4 sm:space-y-5">
-                <h3 className="text-[10px] sm:text-[11px] font-black text-[#1E90FF] uppercase tracking-[0.2em] bg-blue-50/50 px-4 py-2 rounded-lg sm:rounded-xl inline-block border border-blue-100">{cat}</h3>
-                <div className="space-y-1 sm:space-y-2">
-                  {stage2Items[cat].map(renderItemRow)}
+                  {(step === 1 ? stage1Items[cat] : stage2Items[cat]).map(renderItemRow)}
                 </div>
               </div>
             ))}

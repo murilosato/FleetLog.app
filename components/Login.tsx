@@ -48,7 +48,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      // Login via Supabase Auth
+      // 1. Tentar Autenticação no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPass
@@ -62,26 +62,58 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
 
       if (authData.user) {
-        // Buscar perfil na tabela users
-        const { data: profile, error: profileError } = await supabase
+        const authUserId = authData.user.id;
+
+        // 2. Tentar buscar perfil pelo novo ID (UUID)
+        let { data: profile, error: profileError } = await supabase
           .from('users')
           .select('*')
-          .eq('id', authData.user.id)
-          .single();
+          .eq('id', authUserId)
+          .maybeSingle();
 
-        if (profileError || !profile) {
-          throw new Error('Perfil não encontrado. Contate o administrador.');
+        // 3. Lógica de Sincronização Obrigatória (Link por e-mail)
+        if (!profile) {
+          console.log("Sincronizando ID do perfil...");
+          
+          // Busca o perfil que tem o e-mail mas ainda está com o ID antigo (texto)
+          const { data: legacyProfile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', cleanEmail)
+            .maybeSingle();
+
+          if (legacyProfile) {
+            // "Carimba" o perfil com o novo UUID do Auth
+            const { data: updatedProfile, error: updateError } = await supabase
+              .from('users')
+              .update({ id: authUserId })
+              .eq('username', cleanEmail)
+              .select()
+              .single();
+
+            if (updateError) {
+              console.error("Erro na atualização do ID:", updateError);
+              throw new Error("Erro de banco de dados. Por favor, execute o script SQL de reparo.");
+            }
+            profile = updatedProfile;
+          }
+        }
+
+        // 4. Verificações Finais
+        if (!profile) {
+          throw new Error('Perfil não encontrado no sistema. Verifique com seu gestor.');
         }
 
         if (profile.active === false) {
           await supabase.auth.signOut();
-          throw new Error('Acesso negado: Conta inativa.');
+          throw new Error('Esta conta foi desativada.');
         }
 
         onLogin(profile as User);
       }
     } catch (err: any) {
       setError(err.message);
+      await supabase.auth.signOut();
     } finally {
       setLoading(false);
     }
@@ -89,8 +121,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-rajdhani">
-      
-      {/* Imagem de Fundo (Frota) - Revertida ao Original */}
+      {/* Imagem de Fundo (Frota) */}
       <div className="absolute inset-0 z-0">
         <img 
           src="https://ybclluccxjblhougqdep.supabase.co/storage/v1/object/public/FLEETLOG/VEICULOS.png" 
@@ -100,14 +131,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/70 via-transparent to-[#020617]"></div>
       </div>
 
-      {/* Grid de Fundo Sutil */}
       <div className="absolute inset-0 grid-bg opacity-[0.05] pointer-events-none"></div>
       
       <div className="max-w-md w-full relative z-10 animate-in fade-in zoom-in-95 duration-1000">
         <div className="bg-[#0f172a]/95 backdrop-blur-3xl rounded-[2.5rem] p-8 sm:p-12 shadow-[0_0_100px_rgba(0,0,0,0.7)] border border-slate-800/60">
           
           <div className="flex flex-col items-center mb-10 text-center">
-            {/* Logo Original: FLEET (Azul) LOG (Grafite) */}
             <div className="mb-2">
               <h1 className="text-4xl sm:text-5xl font-black tracking-tighter flex items-baseline">
                 <span className="text-[#00548b]">FLEET</span>

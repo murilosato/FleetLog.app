@@ -29,11 +29,10 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Monitoramento de Sessão Profissional (Supabase Auth)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user.id, session.user.email);
       } else {
         setIsLoading(false);
       }
@@ -41,7 +40,7 @@ const App: React.FC = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user.id, session.user.email);
       } else {
         setUser(null);
         setIsLoading(false);
@@ -51,19 +50,37 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (authId: string, email?: string) => {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id', userId)
-        .single();
+        .eq('id', authId)
+        .maybeSingle();
       
+      if ((error || !data) && email) {
+        const { data: legacyData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', email.toLowerCase())
+          .maybeSingle();
+        
+        if (legacyData) {
+          const { data: updated, error: updateError } = await supabase
+            .from('users')
+            .update({ id: authId })
+            .eq('username', email.toLowerCase())
+            .select()
+            .single();
+          data = !updateError ? updated : legacyData;
+        }
+      }
+
       if (data) {
         setUser(data as User);
-      } else if (error) {
-        console.error("Erro ao carregar perfil:", error.message);
       }
+    } catch (err) {
+      console.error("Erro na carga de sessão:", err);
     } finally {
       setIsLoading(false);
     }
@@ -85,23 +102,28 @@ const App: React.FC = () => {
       if (lubRes.data) setLubricantEntries(lubRes.data as LubricantEntry[]);
       if (maintRes.data) setMaintenanceSessions(maintRes.data as MaintenanceSession[]);
     } catch (err) {
-      console.error('Erro ao buscar dados:', err);
+      console.error('Erro ao buscar dados operacionais:', err);
     }
   }, [user]);
 
   const initAppData = useCallback(async () => {
     if (!user) return;
     try {
-      const [vRes, iRes, uRes] = await Promise.all([
-        supabase.from('vehicles').select('*').order('prefix'),
-        supabase.from('checklist_items').select('*').order('id'),
-        supabase.from('users').select('*').order('name')
-      ]);
+      // Busca individual para evitar que uma falha trave todas as outras
+      const vRes = await supabase.from('vehicles').select('*').order('prefix');
+      if (vRes.error) console.error("Erro veículos:", vRes.error);
       if (vRes.data) setVehicles(vRes.data);
+
+      const iRes = await supabase.from('checklist_items').select('*').order('id');
+      if (iRes.error) console.error("Erro itens checklist:", iRes.error);
       if (iRes.data) setChecklistItems(iRes.data);
+
+      const uRes = await supabase.from('users').select('*').order('name');
+      if (uRes.error) console.error("Erro usuários:", uRes.error);
       if (uRes.data) setUsers(uRes.data as User[]);
+      
     } catch (err) {
-      console.error(err);
+      console.error("Erro na inicialização de tabelas base:", err);
     }
   }, [user]);
 
@@ -118,19 +140,13 @@ const App: React.FC = () => {
     setView('dashboard');
   };
 
-  // Trava de Navegação por Hierarquia
-  useEffect(() => {
-    if (user) {
-      if ((view === 'admin' || view === 'reports') && user.role !== 'ADMIN') {
-        setView('dashboard');
-      }
-    }
-  }, [view, user]);
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00548b]"></div>
+        <p className="text-[#00548b] font-black text-[10px] uppercase tracking-[0.3em] animate-pulse text-center px-4">
+          Sincronizando FleetLog...
+        </p>
       </div>
     );
   }
