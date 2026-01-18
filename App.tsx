@@ -31,7 +31,6 @@ const App: React.FC = () => {
 
   // Monitoramento de Sessão Profissional (Supabase Auth)
   useEffect(() => {
-    // 1. Verificar se já existe uma sessão ativa ao carregar o app
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         fetchUserProfile(session.user.id);
@@ -40,7 +39,6 @@ const App: React.FC = () => {
       }
     });
 
-    // 2. Ouvir mudanças (Login/Logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         fetchUserProfile(session.user.id);
@@ -119,6 +117,15 @@ const App: React.FC = () => {
     setUser(null);
     setView('dashboard');
   };
+
+  // Trava de Navegação por Hierarquia
+  useEffect(() => {
+    if (user) {
+      if ((view === 'admin' || view === 'reports') && user.role !== 'ADMIN') {
+        setView('dashboard');
+      }
+    }
+  }, [view, user]);
 
   if (isLoading) {
     return (
