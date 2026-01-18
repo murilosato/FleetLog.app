@@ -27,7 +27,49 @@ const App: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [checklistItems, setChecklistItems] = useState<DBChecklistItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Monitoramento de Sessão Profissional (Supabase Auth)
+  useEffect(() => {
+    // 1. Verificar se já existe uma sessão ativa ao carregar o app
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // 2. Ouvir mudanças (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (data) {
+        setUser(data as User);
+      } else if (error) {
+        console.error("Erro ao carregar perfil:", error.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -51,7 +93,6 @@ const App: React.FC = () => {
 
   const initAppData = useCallback(async () => {
     if (!user) return;
-    setIsLoading(true);
     try {
       const [vRes, iRes, uRes] = await Promise.all([
         supabase.from('vehicles').select('*').order('prefix'),
@@ -63,19 +104,29 @@ const App: React.FC = () => {
       if (uRes.data) setUsers(uRes.data as User[]);
     } catch (err) {
       console.error(err);
-    } finally {
-      setIsLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    if (user) { fetchData(); initAppData(); }
+    if (user) { 
+      fetchData(); 
+      initAppData(); 
+    }
   }, [user, fetchData, initAppData]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     setView('dashboard');
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00548b]"></div>
+      </div>
+    );
+  }
 
   if (!user) return <Login onLogin={setUser} />;
 
