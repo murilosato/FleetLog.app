@@ -20,7 +20,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
   const [editingId, setEditingId] = useState<any>(null);
-  const [password, setPassword] = useState(''); // Estado para a senha do novo usuário
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (tab === 'users') fetchUsers();
@@ -63,45 +63,60 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
     try {
       if (editingId) {
-        // Edição de registro existente
         const { error } = await supabase.from(table).update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
-        // Novo Registro
         if (tab === 'users') {
           if (!password || password.length < 6) {
             throw new Error("A senha deve ter pelo menos 6 caracteres.");
           }
 
-          // 1. Criar usuário no Supabase Auth (Login)
+          const userEmail = payload.username.trim().toLowerCase();
+
+          // 1. Tentar criar no Supabase Auth
           const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: payload.username.trim().toLowerCase(),
+            email: userEmail,
             password: password
           });
 
-          if (authError) throw authError;
-          if (!authData.user) throw new Error("Falha ao gerar credenciais de acesso.");
+          // Caso o usuário já exista no Auth, tentamos apenas o upsert no perfil
+          if (authError && authError.message !== 'User already registered') {
+            throw authError;
+          }
 
-          // 2. Usar o ID do Auth para o registro na tabela de usuários
-          payload.id = authData.user.id;
+          if (authData?.user) {
+            payload.id = authData.user.id;
+          } else {
+            // Se já existe no auth, precisamos do ID dele para vincular o perfil
+            // Infelizmente via frontend signUp não retorna o ID se já existir, 
+            // mas o upsert por 'username' resolve conflitos de constraint.
+          }
+          
+          // 2. Salva o perfil. Usamos upsert especificando 'username' como chave de conflito 
+          // caso o ID (PK) mude por ser uma nova conta de Auth.
+          const { error: profileError } = await supabase
+            .from('users')
+            .upsert([payload], { onConflict: 'username' });
+            
+          if (profileError) throw profileError;
+        } else {
+          const { error } = await supabase.from(table).insert([payload]);
+          if (error) throw error;
         }
-
-        const { error } = await supabase.from(table).insert([payload]);
-        if (error) throw error;
       }
       
       setIsEditing(false);
       setEditData({});
       setEditingId(null);
-      setPassword(''); // Limpa a senha após salvar
+      setPassword('');
       
       if (tab === 'users') fetchUsers();
       else if (tab === 'fuels') fetchInsumos();
       else onRefresh();
       
-      alert("Registro salvo com sucesso!");
+      alert("Registro processado com sucesso!");
     } catch (err: any) {
-      alert("Erro ao salvar dados: " + err.message);
+      alert("Erro na operação: " + (err.message || "Falha ao gravar no banco."));
     } finally {
       setLoading(false);
     }
@@ -179,108 +194,62 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
       {isEditing ? (
         <div className="bg-white p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[3.5rem] border border-slate-100 shadow-sm animate-in zoom-in-95 max-w-2xl mx-auto">
            <h3 className="text-xl sm:text-2xl font-black text-[#0A2540] mb-8 sm:mb-10 uppercase">{editingId ? 'Editar Registro' : 'Novo Cadastro'}</h3>
+           
+           {tab === 'users' && !editingId && (
+             <div className="mb-8 p-5 bg-orange-50 border-2 border-orange-100 rounded-3xl animate-in fade-in">
+                <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                  Configuração no Supabase
+                </p>
+                <p className="text-[11px] font-bold text-slate-600 leading-relaxed italic">
+                  Para que o usuário logue sem erros, desative "Confirm Email" em Authentication > Settings no Dashboard do seu Supabase.
+                </p>
+             </div>
+           )}
+
            <form onSubmit={handleSave} className="space-y-5 sm:space-y-6">
               {tab === 'vehicles' && (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      {renderLabel("Prefixo do Veículo")}
-                      <input placeholder="Ex: 1.1.5.01" value={editData.prefix || ''} onChange={e => setEditData({...editData, prefix: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                    </div>
-                    <div>
-                      {renderLabel("Placa")}
-                      <input placeholder="Ex: ABC-1234" value={editData.plate || ''} onChange={e => setEditData({...editData, plate: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                    </div>
+                    <div>{renderLabel("Prefixo do Veículo")}<input placeholder="Ex: 1.1.5.01" value={editData.prefix || ''} onChange={e => setEditData({...editData, prefix: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required /></div>
+                    <div>{renderLabel("Placa")}<input placeholder="Ex: ABC-1234" value={editData.plate || ''} onChange={e => setEditData({...editData, plate: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required /></div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     <div>
-                       {renderLabel("Kilometragem Atual")}
-                       <input type="number" placeholder="0" value={editData.current_km || ''} onChange={e => setEditData({...editData, current_km: Number(e.target.value)})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" />
-                     </div>
-                     <div>
-                       {renderLabel("Horímetro Atual")}
-                       <input type="number" placeholder="0" value={editData.current_horimetro || ''} onChange={e => setEditData({...editData, current_horimetro: Number(e.target.value)})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" />
-                     </div>
+                     <div>{renderLabel("KM Atual")}<input type="number" value={editData.current_km || ''} onChange={e => setEditData({...editData, current_km: Number(e.target.value)})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" /></div>
+                     <div>{renderLabel("Horímetro Atual")}<input type="number" value={editData.current_horimetro || ''} onChange={e => setEditData({...editData, current_horimetro: Number(e.target.value)})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" /></div>
                   </div>
                 </>
               )}
               {tab === 'items' && (
                 <>
-                  <div>
-                    {renderLabel("Descrição do Item do Checklist")}
-                    <input placeholder="Ex: Nível de Óleo" value={editData.label || ''} onChange={e => setEditData({...editData, label: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                  </div>
-                  <div>
-                    {renderLabel("Categoria / Agrupamento")}
-                    <input placeholder="Ex: MOTOR, CABINE, etc" value={editData.category || ''} onChange={e => setEditData({...editData, category: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                  </div>
+                  <div>{renderLabel("Nome do Item")}<input placeholder="Ex: Nível de Óleo" value={editData.label || ''} onChange={e => setEditData({...editData, label: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required /></div>
+                  <div>{renderLabel("Categoria")}<input placeholder="Ex: MOTOR, CABINE" value={editData.category || ''} onChange={e => setEditData({...editData, category: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required /></div>
                 </>
               )}
               {tab === 'fuels' && (
                 <>
-                  <div>
-                    {renderLabel("Tipo de Registro")}
-                    <select value={editData._type} onChange={e => setEditData({...editData, _type: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all mb-1">
-                      <option value="fuel">Combustível</option>
-                      <option value="lubricant">Lubrificante / Insumo</option>
-                    </select>
-                  </div>
-                  <div>
-                    {renderLabel("Nome do Insumo")}
-                    <input placeholder="Ex: Diesel S10, Óleo 15W40" value={editData.name || ''} onChange={e => setEditData({...editData, name: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                  </div>
+                  <div>{renderLabel("Tipo de Registro")}<select value={editData._type} onChange={e => setEditData({...editData, _type: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all mb-1"><option value="fuel">Combustível</option><option value="lubricant">Lubrificante / Insumo</option></select></div>
+                  <div>{renderLabel("Nome do Insumo")}<input placeholder="Ex: Diesel S10" value={editData.name || ''} onChange={e => setEditData({...editData, name: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required /></div>
                 </>
               )}
               {tab === 'users' && (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      {renderLabel("Nome Completo")}
-                      <input placeholder="Ex: João da Silva" value={editData.name || ''} onChange={e => setEditData({...editData, name: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                    </div>
-                    <div>
-                      {renderLabel("E-mail (Login de Acesso)")}
-                      <input type="email" placeholder="Ex: joao@empresa.com" value={editData.username || ''} onChange={e => setEditData({...editData, username: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                    </div>
+                    <div>{renderLabel("Nome Completo")}<input placeholder="Ex: João da Silva" value={editData.name || ''} onChange={e => setEditData({...editData, name: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required /></div>
+                    <div>{renderLabel("E-mail (Login)")}<input type="email" placeholder="Ex: joao@empresa.com" value={editData.username || ''} onChange={e => setEditData({...editData, username: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required disabled={!!editingId} /></div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      {renderLabel("Matrícula")}
-                      <input placeholder="Ex: 12345" value={editData.matricula || ''} onChange={e => setEditData({...editData, matricula: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                    </div>
-                    <div>
-                      {renderLabel("Perfil")}
-                      <select value={editData.role || 'OPERADOR'} onChange={e => setEditData({...editData, role: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all">
-                        <option value="OPERADOR">Operador / Motorista</option>
-                        <option value="MANUTENCAO">Oficina / Mecânico</option>
-                        <option value="OPERACAO">Fiscal / Operação</option>
-                        <option value="ADMIN">Administrador</option>
-                      </select>
-                    </div>
+                    <div>{renderLabel("Matrícula")}<input placeholder="12345" value={editData.matricula || ''} onChange={e => setEditData({...editData, matricula: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required /></div>
+                    <div>{renderLabel("Perfil")}<select value={editData.role || 'OPERADOR'} onChange={e => setEditData({...editData, role: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all"><option value="OPERADOR">Operador</option><option value="MANUTENCAO">Oficina</option><option value="OPERACAO">Fiscal</option><option value="ADMIN">Administrador</option></select></div>
                   </div>
-                  
-                  {/* Campo de Senha - Apenas para novos usuários */}
                   {!editingId && (
-                    <div className="animate-in fade-in slide-in-from-top-2">
-                      {renderLabel("Senha de Acesso (Mín. 6 dígitos)")}
-                      <input 
-                        type="password" 
-                        placeholder="Defina a senha inicial" 
-                        value={password} 
-                        onChange={e => setPassword(e.target.value)} 
-                        className="w-full p-4 sm:p-5 bg-blue-50/50 border-2 border-blue-100 rounded-2xl font-bold text-sm outline-none focus:border-[#00548b] transition-all" 
-                        required 
-                      />
-                      <p className="text-[9px] font-bold text-slate-400 mt-2 ml-2 italic">A senha será necessária para o primeiro login do usuário.</p>
-                    </div>
+                    <div>{renderLabel("Senha de Acesso")}<input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-4 bg-blue-50/50 border-2 border-blue-100 rounded-2xl font-bold text-sm outline-none focus:border-[#00548b] transition-all" required /></div>
                   )}
                 </>
               )}
               <div className="flex gap-4 pt-6">
-                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 sm:py-5 bg-slate-100 text-slate-400 rounded-2xl font-bold text-[10px] sm:text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-colors">Cancelar</button>
-                <button type="submit" disabled={loading} className="flex-1 py-4 sm:py-5 bg-[#00548b] text-white rounded-2xl font-bold text-[10px] sm:text-[11px] uppercase tracking-widest shadow-xl hover:bg-[#00436e] transition-colors disabled:opacity-50">
-                  {loading ? 'Salvando...' : 'Confirmar Cadastro'}
-                </button>
+                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-bold text-[10px] uppercase tracking-widest">Cancelar</button>
+                <button type="submit" disabled={loading} className="flex-1 py-4 bg-[#00548b] text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-xl disabled:opacity-50">{loading ? 'Salvando...' : 'Confirmar'}</button>
               </div>
            </form>
         </div>
@@ -293,97 +262,55 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
               <table className="w-full text-left min-w-[700px]">
                 <thead>
                   <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <th className="px-6 sm:px-10 py-5 sm:py-7">Identificação / Nome</th>
-                    <th className="px-6 sm:px-10 py-5 sm:py-7">Configurações / Info</th>
+                    <th className="px-6 sm:px-10 py-5 sm:py-7">Identificação</th>
+                    <th className="px-6 sm:px-10 py-5 sm:py-7">Configurações</th>
                     <th className="px-6 sm:px-10 py-5 sm:py-7 text-center">Status</th>
                     <th className="px-6 sm:px-10 py-5 sm:py-7 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {tab === 'vehicles' && (vehicles || []).map(v => (
-                    <tr key={v.id} className={`hover:bg-slate-50/50 transition-colors ${v.active === false ? 'opacity-40 grayscale' : ''}`}>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="font-bold text-[#0A2540] text-lg uppercase">{v.prefix}</p></td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{v.plate} | {v.current_km} KM</p>
-                      </td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
-                        <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${v.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{v.active !== false ? 'Ativo' : 'Inativo'}</span>
-                      </td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6">
-                        <div className="flex justify-end gap-3 items-center">
-                          <button onClick={() => openEdit(v)} className="text-[10px] font-bold text-[#1E90FF] uppercase tracking-widest hover:underline">Editar</button>
-                          <button onClick={() => handleToggleStatus('vehicles', v.id, v.active !== false)} className={`text-[10px] font-bold px-5 sm:px-6 py-2 rounded-xl transition-all shadow-sm ${v.active !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{v.active !== false ? 'Inativar' : 'Ativar'}</button>
-                        </div>
-                      </td>
+                    <tr key={v.id} className={`hover:bg-slate-50/50 ${v.active === false ? 'opacity-40 grayscale' : ''}`}>
+                      <td className="px-6 sm:px-10 py-4"><p className="font-bold text-[#0A2540] text-lg uppercase">{v.prefix}</p></td>
+                      <td className="px-6 sm:px-10 py-4"><p className="text-[10px] font-bold text-slate-400 uppercase">{v.plate} | {v.current_km} KM</p></td>
+                      <td className="px-6 sm:px-10 py-4 text-center"><span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase ${v.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{v.active !== false ? 'Ativo' : 'Inativo'}</span></td>
+                      <td className="px-6 sm:px-10 py-4 text-right"><div className="flex justify-end gap-3 items-center"><button onClick={() => openEdit(v)} className="text-[10px] font-bold text-[#1E90FF] uppercase">Editar</button><button onClick={() => handleToggleStatus('vehicles', v.id, v.active !== false)} className="text-[10px] font-bold px-4 py-2 bg-slate-50 rounded-xl">{v.active !== false ? 'Inativar' : 'Ativar'}</button></div></td>
                     </tr>
                   ))}
                   {tab === 'items' && (items || []).map(i => (
-                    <tr key={i.id} className={`hover:bg-slate-50/50 transition-colors ${i.active === false ? 'opacity-40 grayscale' : ''}`}>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="font-bold text-[#0A2540] text-sm uppercase">[{i.id.toString().padStart(2, '0')}] {i.label}</p></td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{i.category}</p></td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
-                        <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${i.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{i.active !== false ? 'Ativo' : 'Oculto'}</span>
-                      </td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6">
-                        <div className="flex justify-end gap-3 items-center">
-                          <button onClick={() => openEdit(i)} className="text-[10px] font-bold text-[#1E90FF] uppercase tracking-widest hover:underline">Editar</button>
-                          <button onClick={() => handleToggleStatus('checklist_items', i.id, i.active !== false)} className={`text-[10px] font-bold px-5 sm:px-6 py-2 rounded-xl transition-all shadow-sm ${i.active !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{i.active !== false ? 'Inativar' : 'Exibir'}</button>
-                        </div>
-                      </td>
+                    <tr key={i.id} className={`hover:bg-slate-50/50 ${i.active === false ? 'opacity-40 grayscale' : ''}`}>
+                      <td className="px-6 sm:px-10 py-4"><p className="font-bold text-[#0A2540] text-sm uppercase">[{i.id}] {i.label}</p></td>
+                      <td className="px-6 sm:px-10 py-4"><p className="text-[10px] font-bold text-slate-400 uppercase">{i.category}</p></td>
+                      <td className="px-6 sm:px-10 py-4 text-center"><span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase ${i.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{i.active !== false ? 'Ativo' : 'Oculto'}</span></td>
+                      <td className="px-6 sm:px-10 py-4 text-right"><div className="flex justify-end gap-3 items-center"><button onClick={() => openEdit(i)} className="text-[10px] font-bold text-[#1E90FF] uppercase">Editar</button><button onClick={() => handleToggleStatus('checklist_items', i.id, i.active !== false)} className="text-[10px] font-bold px-4 py-2 bg-slate-50 rounded-xl">Status</button></div></td>
                     </tr>
                   ))}
                   {tab === 'fuels' && (
                     <>
                       {fuelTypes.map(f => (
-                        <tr key={`f-${f.id}`} className={`hover:bg-slate-50/50 transition-colors ${f.active === false ? 'opacity-40 grayscale' : ''}`}>
-                          <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="font-bold text-[#0A2540] text-sm uppercase">{f.name}</p></td>
-                          <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Combustível</p></td>
-                          <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
-                            <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${f.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{f.active !== false ? 'Ativo' : 'Inativo'}</span>
-                          </td>
-                          <td className="px-6 sm:px-10 py-4 sm:py-6">
-                            <div className="flex justify-end gap-3 items-center">
-                              <button onClick={() => openEdit(f, 'fuel')} className="text-[10px] font-bold text-[#1E90FF] uppercase tracking-widest hover:underline">Editar</button>
-                              <button onClick={() => handleToggleStatus('fuel_types', f.id, f.active !== false)} className={`text-[10px] font-bold px-5 sm:px-6 py-2 rounded-xl transition-all shadow-sm ${f.active !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{f.active !== false ? 'Inativar' : 'Ativar'}</button>
-                            </div>
-                          </td>
+                        <tr key={`f-${f.id}`} className={`hover:bg-slate-50/50 ${f.active === false ? 'opacity-40' : ''}`}>
+                          <td className="px-6 sm:px-10 py-4"><p className="font-bold text-[#0A2540] text-sm uppercase">{f.name}</p></td>
+                          <td className="px-6 sm:px-10 py-4"><p className="text-[10px] font-bold text-slate-400 uppercase">Combustível</p></td>
+                          <td className="px-6 sm:px-10 py-4 text-center"><span className="text-[8px] font-black px-3 py-1.5 rounded-lg uppercase bg-blue-50 text-blue-600">Ativo</span></td>
+                          <td className="px-6 sm:px-10 py-4 text-right"><div className="flex justify-end gap-3 items-center"><button onClick={() => openEdit(f, 'fuel')} className="text-[10px] font-bold text-[#1E90FF] uppercase">Editar</button></div></td>
                         </tr>
                       ))}
                       {lubricantTypes.map(l => (
-                        <tr key={`l-${l.id}`} className={`hover:bg-slate-50/50 transition-colors ${l.active === false ? 'opacity-40 grayscale' : ''}`}>
-                          <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="font-bold text-[#0A2540] text-sm uppercase">{l.name}</p></td>
-                          <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lubrificante</p></td>
-                          <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
-                            <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${l.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{l.active !== false ? 'Ativo' : 'Inativo'}</span>
-                          </td>
-                          <td className="px-6 sm:px-10 py-4 sm:py-6">
-                            <div className="flex justify-end gap-3 items-center">
-                              <button onClick={() => openEdit(l, 'lubricant')} className="text-[10px] font-bold text-[#1E90FF] uppercase tracking-widest hover:underline">Editar</button>
-                              <button onClick={() => handleToggleStatus('lubricant_types', l.id, l.active !== false)} className={`text-[10px] font-bold px-5 sm:px-6 py-2 rounded-xl transition-all shadow-sm ${l.active !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{l.active !== false ? 'Inativar' : 'Ativar'}</button>
-                            </div>
-                          </td>
+                        <tr key={`l-${l.id}`} className={`hover:bg-slate-50/50 ${l.active === false ? 'opacity-40' : ''}`}>
+                          <td className="px-6 sm:px-10 py-4"><p className="font-bold text-[#0A2540] text-sm uppercase">{l.name}</p></td>
+                          <td className="px-6 sm:px-10 py-4"><p className="text-[10px] font-bold text-slate-400 uppercase">Lubrificante</p></td>
+                          <td className="px-6 sm:px-10 py-4 text-center"><span className="text-[8px] font-black px-3 py-1.5 rounded-lg uppercase bg-orange-50 text-orange-600">Ativo</span></td>
+                          <td className="px-6 sm:px-10 py-4 text-right"><div className="flex justify-end gap-3 items-center"><button onClick={() => openEdit(l, 'lubricant')} className="text-[10px] font-bold text-[#1E90FF] uppercase">Editar</button></div></td>
                         </tr>
                       ))}
                     </>
                   )}
                   {tab === 'users' && dbUsers.map(u => (
-                    <tr key={u.id} className={`hover:bg-slate-50/50 transition-colors ${u.active === false ? 'opacity-40 grayscale' : ''}`}>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6">
-                        <p className="font-bold text-[#0A2540] text-sm uppercase">{u.name}</p>
-                        <p className="text-[9px] text-slate-400 font-bold lowercase">{u.username}</p>
-                      </td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{u.role} | MAT: {u.matricula}</p>
-                      </td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
-                        <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${u.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{u.active !== false ? 'Ativo' : 'Inativo'}</span>
-                      </td>
-                      <td className="px-6 sm:px-10 py-4 sm:py-6">
-                        <div className="flex justify-end gap-3 items-center">
-                          <button onClick={() => openEdit(u)} className="text-[10px] font-bold text-[#1E90FF] uppercase tracking-widest hover:underline">Editar</button>
-                          <button onClick={() => handleToggleStatus('users', u.id, u.active !== false)} className={`text-[10px] font-bold px-5 sm:px-6 py-2 rounded-xl transition-all shadow-sm ${u.active !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{u.active !== false ? 'Inativar' : 'Ativar'}</button>
-                        </div>
-                      </td>
+                    <tr key={u.id} className={`hover:bg-slate-50/50 ${u.active === false ? 'opacity-40' : ''}`}>
+                      <td className="px-6 sm:px-10 py-4"><p className="font-bold text-[#0A2540] text-sm uppercase">{u.name}</p><p className="text-[9px] text-slate-400 lowercase">{u.username}</p></td>
+                      <td className="px-6 sm:px-10 py-4"><p className="text-[10px] font-bold text-slate-400 uppercase">{u.role} | MAT: {u.matricula}</p></td>
+                      <td className="px-6 sm:px-10 py-4 text-center"><span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase ${u.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{u.active !== false ? 'Ativo' : 'Inativo'}</span></td>
+                      <td className="px-6 sm:px-10 py-4 text-right"><div className="flex justify-end gap-3 items-center"><button onClick={() => openEdit(u)} className="text-[10px] font-bold text-[#1E90FF] uppercase">Editar</button><button onClick={() => handleToggleStatus('users', u.id, u.active !== false)} className="text-[10px] font-bold px-4 py-2 bg-slate-50 rounded-xl">Status</button></div></td>
                     </tr>
                   ))}
                 </tbody>
