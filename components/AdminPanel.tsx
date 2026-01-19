@@ -48,6 +48,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     
     let table = '';
@@ -63,9 +64,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
     try {
       if (editingId) {
+        // Modo Edição: Apenas atualiza o registro existente
         const { error } = await supabase.from(table).update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
+        // Modo Novo Registro
         if (tab === 'users') {
           if (!password || password.length < 6) {
             throw new Error("A senha deve ter pelo menos 6 caracteres.");
@@ -73,50 +76,66 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
           const userEmail = payload.username.trim().toLowerCase();
 
-          // 1. Tentar criar no Supabase Auth
+          // 1. Verificar se o perfil já existe na tabela 'users' por e-mail
+          const { data: existingProfile } = await supabase
+            .from('users')
+            .select('id')
+            .eq('username', userEmail)
+            .maybeSingle();
+
+          let authId = existingProfile?.id;
+
+          // 2. Tentar criar no Supabase Auth
           const { data: authData, error: authError } = await supabase.auth.signUp({
             email: userEmail,
             password: password
           });
 
-          // Caso o usuário já exista no Auth, tentamos apenas o upsert no perfil
+          // Se o erro for 'User already registered', ignoramos e tentamos atualizar o perfil
           if (authError && authError.message !== 'User already registered') {
             throw authError;
           }
 
+          // Se criou agora, pegamos o novo ID
           if (authData?.user) {
-            payload.id = authData.user.id;
+            authId = authData.user.id;
+          }
+
+          if (!authId) {
+             // Caso extremo: Usuário já está no auth mas não temos o ID dele.
+             // O upsert por username resolverá se houver conflito.
           } else {
-            // Se já existe no auth, precisamos do ID dele para vincular o perfil
-            // Infelizmente via frontend signUp não retorna o ID se já existir, 
-            // mas o upsert por 'username' resolve conflitos de constraint.
+            payload.id = authId;
           }
           
-          // 2. Salva o perfil. Usamos upsert especificando 'username' como chave de conflito 
-          // caso o ID (PK) mude por ser uma nova conta de Auth.
+          // 3. Salva ou Atualiza o Perfil usando UPSERT
+          // Priorizamos o conflito pelo campo 'username' para evitar o erro de constraint
           const { error: profileError } = await supabase
             .from('users')
             .upsert([payload], { onConflict: 'username' });
             
           if (profileError) throw profileError;
         } else {
+          // Outras tabelas usam insert normal
           const { error } = await supabase.from(table).insert([payload]);
           if (error) throw error;
         }
       }
       
+      // Limpeza de estado após sucesso
       setIsEditing(false);
       setEditData({});
       setEditingId(null);
       setPassword('');
       
+      // Recarregar dados da lista
       if (tab === 'users') fetchUsers();
       else if (tab === 'fuels') fetchInsumos();
       else onRefresh();
       
-      alert("Registro processado com sucesso!");
+      alert("Registro salvo com sucesso!");
     } catch (err: any) {
-      alert("Erro na operação: " + (err.message || "Falha ao gravar no banco."));
+      alert("Erro ao salvar: " + (err.message || "Erro desconhecido."));
     } finally {
       setLoading(false);
     }
@@ -195,18 +214,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
         <div className="bg-white p-6 sm:p-10 rounded-[2.5rem] sm:rounded-[3.5rem] border border-slate-100 shadow-sm animate-in zoom-in-95 max-w-2xl mx-auto">
            <h3 className="text-xl sm:text-2xl font-black text-[#0A2540] mb-8 sm:mb-10 uppercase">{editingId ? 'Editar Registro' : 'Novo Cadastro'}</h3>
            
-           {tab === 'users' && !editingId && (
-             <div className="mb-8 p-5 bg-orange-50 border-2 border-orange-100 rounded-3xl animate-in fade-in">
-                <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1 flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                  Configuração no Supabase
-                </p>
-                <p className="text-[11px] font-bold text-slate-600 leading-relaxed italic">
-                  Para que o usuário logue sem erros, desative "Confirm Email" em Authentication > Settings no Dashboard do seu Supabase.
-                </p>
-             </div>
-           )}
-
            <form onSubmit={handleSave} className="space-y-5 sm:space-y-6">
               {tab === 'vehicles' && (
                 <>
