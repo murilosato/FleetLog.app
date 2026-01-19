@@ -20,6 +20,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
   const [editingId, setEditingId] = useState<any>(null);
+  const [password, setPassword] = useState(''); // Estado para a senha do novo usuário
 
   useEffect(() => {
     if (tab === 'users') fetchUsers();
@@ -57,14 +58,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
     else if (tab === 'users') table = 'users';
     else if (tab === 'fuels') {
       table = payload._type === 'fuel' ? 'fuel_types' : 'lubricant_types';
-      delete payload._type; // Remover campo auxiliar do formulário
+      delete payload._type;
     }
 
     try {
       if (editingId) {
+        // Edição de registro existente
         const { error } = await supabase.from(table).update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
+        // Novo Registro
+        if (tab === 'users') {
+          if (!password || password.length < 6) {
+            throw new Error("A senha deve ter pelo menos 6 caracteres.");
+          }
+
+          // 1. Criar usuário no Supabase Auth (Login)
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: payload.username.trim().toLowerCase(),
+            password: password
+          });
+
+          if (authError) throw authError;
+          if (!authData.user) throw new Error("Falha ao gerar credenciais de acesso.");
+
+          // 2. Usar o ID do Auth para o registro na tabela de usuários
+          payload.id = authData.user.id;
+        }
+
         const { error } = await supabase.from(table).insert([payload]);
         if (error) throw error;
       }
@@ -72,11 +93,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
       setIsEditing(false);
       setEditData({});
       setEditingId(null);
+      setPassword(''); // Limpa a senha após salvar
       
       if (tab === 'users') fetchUsers();
       else if (tab === 'fuels') fetchInsumos();
       else onRefresh();
       
+      alert("Registro salvo com sucesso!");
     } catch (err: any) {
       alert("Erro ao salvar dados: " + err.message);
     } finally {
@@ -96,6 +119,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
   const openNew = () => {
     setEditingId(null);
+    setPassword('');
     let initial: any = { active: true };
     if (tab === 'fuels') initial._type = 'fuel';
     if (tab === 'items') initial.category = 'GERAL';
@@ -110,6 +134,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
 
   const openEdit = (item: any, type?: string) => {
     setEditingId(item.id);
+    setPassword('');
     const dataToEdit = { ...item };
     if (tab === 'fuels' && type) {
       dataToEdit._type = type;
@@ -208,13 +233,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
               )}
               {tab === 'users' && (
                 <>
-                  <div>
-                    {renderLabel("Nome Completo")}
-                    <input placeholder="Ex: João da Silva" value={editData.name || ''} onChange={e => setEditData({...editData, name: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
-                  </div>
-                  <div>
-                    {renderLabel("Usuário de Acesso (E-mail)")}
-                    <input type="email" placeholder="Ex: joao@empresa.com" value={editData.username || ''} onChange={e => setEditData({...editData, username: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      {renderLabel("Nome Completo")}
+                      <input placeholder="Ex: João da Silva" value={editData.name || ''} onChange={e => setEditData({...editData, name: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
+                    </div>
+                    <div>
+                      {renderLabel("E-mail (Login de Acesso)")}
+                      <input type="email" placeholder="Ex: joao@empresa.com" value={editData.username || ''} onChange={e => setEditData({...editData, username: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -231,11 +258,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                       </select>
                     </div>
                   </div>
+                  
+                  {/* Campo de Senha - Apenas para novos usuários */}
+                  {!editingId && (
+                    <div className="animate-in fade-in slide-in-from-top-2">
+                      {renderLabel("Senha de Acesso (Mín. 6 dígitos)")}
+                      <input 
+                        type="password" 
+                        placeholder="Defina a senha inicial" 
+                        value={password} 
+                        onChange={e => setPassword(e.target.value)} 
+                        className="w-full p-4 sm:p-5 bg-blue-50/50 border-2 border-blue-100 rounded-2xl font-bold text-sm outline-none focus:border-[#00548b] transition-all" 
+                        required 
+                      />
+                      <p className="text-[9px] font-bold text-slate-400 mt-2 ml-2 italic">A senha será necessária para o primeiro login do usuário.</p>
+                    </div>
+                  )}
                 </>
               )}
               <div className="flex gap-4 pt-6">
                 <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 sm:py-5 bg-slate-100 text-slate-400 rounded-2xl font-bold text-[10px] sm:text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-colors">Cancelar</button>
-                <button type="submit" className="flex-1 py-4 sm:py-5 bg-[#00548b] text-white rounded-2xl font-bold text-[10px] sm:text-[11px] uppercase tracking-widest shadow-xl hover:bg-[#00436e] transition-colors">Salvar Registro</button>
+                <button type="submit" disabled={loading} className="flex-1 py-4 sm:py-5 bg-[#00548b] text-white rounded-2xl font-bold text-[10px] sm:text-[11px] uppercase tracking-widest shadow-xl hover:bg-[#00436e] transition-colors disabled:opacity-50">
+                  {loading ? 'Salvando...' : 'Confirmar Cadastro'}
+                </button>
               </div>
            </form>
         </div>
