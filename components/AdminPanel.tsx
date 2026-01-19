@@ -24,7 +24,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
   useEffect(() => {
     if (tab === 'users') fetchUsers();
     if (tab === 'fuels') fetchInsumos();
-    // Garante que veículos e itens estejam atualizados ao abrir a tab
     if (tab === 'vehicles' || tab === 'items') onRefresh();
   }, [tab]);
 
@@ -49,29 +48,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
     let table = '';
+    const payload = { ...editData };
+    
     if (tab === 'vehicles') table = 'vehicles';
     else if (tab === 'items') table = 'checklist_items';
     else if (tab === 'users') table = 'users';
-    else {
-      table = editData._type === 'fuel' ? 'fuel_types' : 'lubricant_types';
-      delete editData._type;
+    else if (tab === 'fuels') {
+      table = payload._type === 'fuel' ? 'fuel_types' : 'lubricant_types';
+      delete payload._type; // Remover campo auxiliar do formulário
     }
 
     try {
       if (editingId) {
-        await supabase.from(table).update(editData).eq('id', editingId);
+        const { error } = await supabase.from(table).update(payload).eq('id', editingId);
+        if (error) throw error;
       } else {
-        await supabase.from(table).insert([editData]);
+        const { error } = await supabase.from(table).insert([payload]);
+        if (error) throw error;
       }
+      
       setIsEditing(false);
       setEditData({});
       setEditingId(null);
+      
       if (tab === 'users') fetchUsers();
       else if (tab === 'fuels') fetchInsumos();
       else onRefresh();
-    } catch (err) {
-      alert("Erro ao salvar dados.");
+      
+    } catch (err: any) {
+      alert("Erro ao salvar dados: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -96,13 +103,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
        initial.max_km_jump = 500;
        initial.max_horimetro_jump = 24;
     }
+    if (tab === 'users') initial.role = 'OPERADOR';
     setEditData(initial);
     setIsEditing(true);
   };
 
   const openEdit = (item: any, type?: string) => {
     setEditingId(item.id);
-    setEditData({ ...item, _type: type });
+    const dataToEdit = { ...item };
+    if (tab === 'fuels' && type) {
+      dataToEdit._type = type;
+    }
+    setEditData(dataToEdit);
     setIsEditing(true);
   };
 
@@ -165,19 +177,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                        <input type="number" placeholder="0" value={editData.current_horimetro || ''} onChange={e => setEditData({...editData, current_horimetro: Number(e.target.value)})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" />
                      </div>
                   </div>
-                  <div className="space-y-4 p-5 sm:p-6 bg-slate-50 rounded-[2rem] border border-slate-200">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Regras de Bloqueio Operacional</p>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          {renderLabel("Limite de Pulo KM")}
-                          <input type="number" value={editData.max_km_jump || 500} onChange={e => setEditData({...editData, max_km_jump: Number(e.target.value)})} className="w-full p-4 bg-white rounded-xl font-bold text-sm border-2 outline-none focus:border-[#00548b] transition-all" />
-                        </div>
-                        <div className="space-y-1">
-                          {renderLabel("Limite de Pulo HOR")}
-                          <input type="number" value={editData.max_horimetro_jump || 24} onChange={e => setEditData({...editData, max_horimetro_jump: Number(e.target.value)})} className="w-full p-4 bg-white rounded-xl font-bold text-sm border-2 outline-none focus:border-[#00548b] transition-all" />
-                        </div>
-                     </div>
-                  </div>
                 </>
               )}
               {tab === 'items' && (
@@ -214,21 +213,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                     <input placeholder="Ex: João da Silva" value={editData.name || ''} onChange={e => setEditData({...editData, name: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
                   </div>
                   <div>
-                    {renderLabel("Usuário de Acesso (Login)")}
-                    <input placeholder="Ex: joao.silva" value={editData.username || ''} onChange={e => setEditData({...editData, username: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
+                    {renderLabel("Usuário de Acesso (E-mail)")}
+                    <input type="email" placeholder="Ex: joao@empresa.com" value={editData.username || ''} onChange={e => setEditData({...editData, username: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      {renderLabel("Matrícula Corporativa")}
+                      {renderLabel("Matrícula")}
                       <input placeholder="Ex: 12345" value={editData.matricula || ''} onChange={e => setEditData({...editData, matricula: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all" required />
                     </div>
                     <div>
-                      {renderLabel("Nível de Acesso")}
+                      {renderLabel("Perfil")}
                       <select value={editData.role || 'OPERADOR'} onChange={e => setEditData({...editData, role: e.target.value})} className="w-full p-4 sm:p-5 bg-slate-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-[#00548b] transition-all">
-                        <option value="ADMIN">Administrador Master</option>
-                        <option value="OPERADOR">Motorista / Operador</option>
-                        <option value="MANUTENCAO">Mecânico / Oficina</option>
-                        <option value="OPERACAO">Fiscal de Operação</option>
+                        <option value="OPERADOR">Operador / Motorista</option>
+                        <option value="MANUTENCAO">Oficina / Mecânico</option>
+                        <option value="OPERACAO">Fiscal / Operação</option>
+                        <option value="ADMIN">Administrador</option>
                       </select>
                     </div>
                   </div>
@@ -250,7 +249,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                 <thead>
                   <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     <th className="px-6 sm:px-10 py-5 sm:py-7">Identificação / Nome</th>
-                    <th className="px-6 sm:px-10 py-5 sm:py-7">Configurações Base</th>
+                    <th className="px-6 sm:px-10 py-5 sm:py-7">Configurações / Info</th>
                     <th className="px-6 sm:px-10 py-5 sm:py-7 text-center">Status</th>
                     <th className="px-6 sm:px-10 py-5 sm:py-7 text-right">Ações</th>
                   </tr>
@@ -261,7 +260,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                       <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="font-bold text-[#0A2540] text-lg uppercase">{v.prefix}</p></td>
                       <td className="px-6 sm:px-10 py-4 sm:py-6">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{v.plate} | {v.current_km} KM</p>
-                        <p className="text-[8px] font-black text-[#00548b] uppercase tracking-tighter mt-1">Bloqueio: {v.max_km_jump || 500}km / {v.max_horimetro_jump || 24}h</p>
                       </td>
                       <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
                         <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${v.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{v.active !== false ? 'Ativo' : 'Inativo'}</span>
@@ -289,7 +287,60 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ vehicles, items, onRefresh, onB
                       </td>
                     </tr>
                   ))}
-                  {/* ... Resto das tabs (fuels e users) ... */}
+                  {tab === 'fuels' && (
+                    <>
+                      {fuelTypes.map(f => (
+                        <tr key={`f-${f.id}`} className={`hover:bg-slate-50/50 transition-colors ${f.active === false ? 'opacity-40 grayscale' : ''}`}>
+                          <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="font-bold text-[#0A2540] text-sm uppercase">{f.name}</p></td>
+                          <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Combustível</p></td>
+                          <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
+                            <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${f.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{f.active !== false ? 'Ativo' : 'Inativo'}</span>
+                          </td>
+                          <td className="px-6 sm:px-10 py-4 sm:py-6">
+                            <div className="flex justify-end gap-3 items-center">
+                              <button onClick={() => openEdit(f, 'fuel')} className="text-[10px] font-bold text-[#1E90FF] uppercase tracking-widest hover:underline">Editar</button>
+                              <button onClick={() => handleToggleStatus('fuel_types', f.id, f.active !== false)} className={`text-[10px] font-bold px-5 sm:px-6 py-2 rounded-xl transition-all shadow-sm ${f.active !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{f.active !== false ? 'Inativar' : 'Ativar'}</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {lubricantTypes.map(l => (
+                        <tr key={`l-${l.id}`} className={`hover:bg-slate-50/50 transition-colors ${l.active === false ? 'opacity-40 grayscale' : ''}`}>
+                          <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="font-bold text-[#0A2540] text-sm uppercase">{l.name}</p></td>
+                          <td className="px-6 sm:px-10 py-4 sm:py-6"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lubrificante</p></td>
+                          <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
+                            <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${l.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{l.active !== false ? 'Ativo' : 'Inativo'}</span>
+                          </td>
+                          <td className="px-6 sm:px-10 py-4 sm:py-6">
+                            <div className="flex justify-end gap-3 items-center">
+                              <button onClick={() => openEdit(l, 'lubricant')} className="text-[10px] font-bold text-[#1E90FF] uppercase tracking-widest hover:underline">Editar</button>
+                              <button onClick={() => handleToggleStatus('lubricant_types', l.id, l.active !== false)} className={`text-[10px] font-bold px-5 sm:px-6 py-2 rounded-xl transition-all shadow-sm ${l.active !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{l.active !== false ? 'Inativar' : 'Ativar'}</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
+                  )}
+                  {tab === 'users' && dbUsers.map(u => (
+                    <tr key={u.id} className={`hover:bg-slate-50/50 transition-colors ${u.active === false ? 'opacity-40 grayscale' : ''}`}>
+                      <td className="px-6 sm:px-10 py-4 sm:py-6">
+                        <p className="font-bold text-[#0A2540] text-sm uppercase">{u.name}</p>
+                        <p className="text-[9px] text-slate-400 font-bold lowercase">{u.username}</p>
+                      </td>
+                      <td className="px-6 sm:px-10 py-4 sm:py-6">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{u.role} | MAT: {u.matricula}</p>
+                      </td>
+                      <td className="px-6 sm:px-10 py-4 sm:py-6 text-center">
+                        <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase inline-block ${u.active !== false ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{u.active !== false ? 'Ativo' : 'Inativo'}</span>
+                      </td>
+                      <td className="px-6 sm:px-10 py-4 sm:py-6">
+                        <div className="flex justify-end gap-3 items-center">
+                          <button onClick={() => openEdit(u)} className="text-[10px] font-bold text-[#1E90FF] uppercase tracking-widest hover:underline">Editar</button>
+                          <button onClick={() => handleToggleStatus('users', u.id, u.active !== false)} className={`text-[10px] font-bold px-5 sm:px-6 py-2 rounded-xl transition-all shadow-sm ${u.active !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{u.active !== false ? 'Inativar' : 'Ativar'}</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
